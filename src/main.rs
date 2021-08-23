@@ -1,6 +1,9 @@
 use chrono::DateTime;
 use serde::Deserialize;
 
+mod ui;
+mod widget;
+
 #[derive(Deserialize)]
 struct Image {
     architecture: String,
@@ -52,6 +55,8 @@ fn main() {
         let dif = now - rfc3339.with_timezone(&chrono::Utc);
         println!("{} vor {}", result.tag_name, format_time_nice(dif));
     }
+
+    ui::Ui::new();
 }
 
 fn format_time_nice(time: chrono::Duration) -> String {
