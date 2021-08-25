@@ -1,16 +1,16 @@
-use core::time::Duration;
 use std::sync::mpsc;
 use std::{io, thread};
 
-use termion::event::{Event, Key};
+use termion::event::Key;
 use termion::input::TermRead;
 use termion::raw::IntoRawMode;
 use tui::backend::TermionBackend;
-use tui::layout::{Alignment, Constraint, Direction, Layout};
-use tui::style::{Color, Style};
-use tui::widgets::{Block, Borders, Paragraph};
+use tui::layout::{Constraint, Direction, Layout};
 use tui::Terminal;
 
+use crate::tags;
+use crate::widget::repo_entry;
+use crate::widget::tag_list;
 use crate::widget::Widget;
 
 pub struct Ui {
@@ -26,22 +26,17 @@ pub enum State {
 }
 
 impl Ui {
-    pub fn new() -> Result<Self, io::Error> {
+    pub fn run() {
         let mut ui = Ui {
             state: State::EditRepo,
-            repo: crate::widget::repo_entry::RepoEntry::new("This is a text"),
-            tags: crate::widget::tag_list::TagList::new(vec![
-                String::from("first"),
-                String::from("second"),
-                String::from("third"),
-                String::from("sdfs"),
-            ]),
+            repo: repo_entry::RepoEntry::new("This is a text"),
+            tags: tag_list::TagList::new(vec![String::from("editing Repository")]),
         };
 
         //setup tui
-        let stdout = io::stdout().into_raw_mode()?;
+        let stdout = io::stdout().into_raw_mode().unwrap();
         let backend = TermionBackend::new(stdout);
-        let mut terminal = Terminal::new(backend)?;
+        let mut terminal = Terminal::new(backend).unwrap();
 
         //setup input thread
         let receiver = ui.spawn_stdin_channel();
@@ -49,17 +44,18 @@ impl Ui {
         //core interaction loop
         'core: loop {
             //draw
-            terminal.draw(|rect| {
-                let chunks = Layout::default()
-                    .direction(Direction::Vertical)
-                    // .margin(1)
-                    .constraints([Constraint::Length(3), Constraint::Min(1)].as_ref())
-                    .split(rect.size());
+            terminal
+                .draw(|rect| {
+                    let chunks = Layout::default()
+                        .direction(Direction::Vertical)
+                        .constraints([Constraint::Length(3), Constraint::Min(1)].as_ref())
+                        .split(rect.size());
 
-                rect.render_widget(ui.repo.render(), chunks[0]);
-                let (list, state) = ui.tags.render();
-                rect.render_stateful_widget(list, chunks[1], state);
-            })?;
+                    rect.render_widget(ui.repo.render(), chunks[0]);
+                    let (list, state) = ui.tags.render();
+                    rect.render_stateful_widget(list, chunks[1], state);
+                })
+                .unwrap();
 
             //handle input
             match receiver.try_recv() {
@@ -74,27 +70,31 @@ impl Ui {
                         ui.state = State::SelectTag;
                         ui.repo.confirm();
                         //TODO query tags and show them switch
+                        match tags::Tags::get_tags(ui.repo.get()) {
+                            Ok(lines) => ui.tags = tag_list::TagList::new(lines),
+                            Err(_) => (),
+                        }
                     }
                 }
                 Ok(Key::Down) => {
                     if ui.state == State::SelectTag {
-                        //TODO select tag
                         ui.tags.next();
                     }
                 }
                 Ok(Key::Up) => {
                     if ui.state == State::SelectTag {
-                        //TODO select tag
                         ui.tags.previous();
                     }
                 }
                 Ok(Key::Backspace) => {
                     ui.state = State::EditRepo;
                     ui.repo.input(Key::Backspace);
+                    ui.tags = tag_list::TagList::new(vec![String::from("editing Repository")]);
                 }
                 Ok(key) => {
                     ui.state = State::EditRepo;
                     ui.repo.input(key);
+                    ui.tags = tag_list::TagList::new(vec![String::from("editing Repository")]);
                 }
                 _ => (),
             }
@@ -102,8 +102,6 @@ impl Ui {
             //sleep for 64ms (15 fps)
             thread::sleep(std::time::Duration::from_millis(32));
         }
-
-        Ok(ui)
     }
 
     pub fn spawn_stdin_channel(&self) -> mpsc::Receiver<termion::event::Key> {

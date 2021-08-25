@@ -18,6 +18,10 @@ impl RepoEntry {
         }
     }
 
+    pub fn get(&self) -> String {
+        self.text.clone()
+    }
+
     pub fn render(&self) -> Paragraph {
         let title = match self.changed {
             true => "Repository*",
