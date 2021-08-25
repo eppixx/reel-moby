@@ -100,7 +100,7 @@ impl Ui {
             }
 
             //sleep for 64ms (15 fps)
-            thread::sleep(std::time::Duration::from_millis(64));
+            thread::sleep(std::time::Duration::from_millis(32));
         }
 
         Ok(ui)

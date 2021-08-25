@@ -19,27 +19,18 @@ impl TagList {
             .list
             .items
             .iter()
-            .enumerate()
             .map(|i| {
-                let mut lines = vec![tui::text::Spans::from(i.1.as_ref())];
-                for _ in 0..i.0 {
-                    lines.push(tui::text::Spans::from(tui::text::Span::styled(
-                        "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-                        Style::default().add_modifier(tui::style::Modifier::ITALIC),
-                    )));
-                }
+                let lines = vec![tui::text::Spans::from(i.as_ref())];
                 tui::widgets::ListItem::new(lines)
-                    .style(Style::default().fg(Color::Black).bg(Color::White))
+                    .style(Style::default().fg(Color::White).bg(Color::Black))
             })
             .collect();
 
         // Create a List from all list items and highlight the currently selected one
         let items = List::new(items)
-            .block(Block::default().borders(Borders::ALL).title("List"))
+            .block(Block::default().borders(Borders::ALL).title("Tags"))
             .highlight_style(
-                Style::default()
-                    .bg(Color::LightGreen)
-                    .add_modifier(tui::style::Modifier::BOLD),
+                Style::default().bg(Color::Black), // .add_modifier(tui::style::Modifier::BOLD),
             )
             .highlight_symbol(">> ");
 
