@@ -11,7 +11,6 @@ use tui::Terminal;
 use crate::tags;
 use crate::widget::repo_entry;
 use crate::widget::tag_list;
-// use crate::widget::Widget;
 
 pub struct Ui {
     state: State,
@@ -26,12 +25,13 @@ pub enum State {
 }
 
 impl Ui {
-    pub fn run() {
+    pub fn run(repo_id: &str) {
         let mut ui = Ui {
             state: State::EditRepo,
-            repo: repo_entry::RepoEntry::new("This is a text"),
-            tags: tag_list::TagList::new(vec![String::from("editing Repository")]),
+            repo: repo_entry::RepoEntry::new(repo_id),
+            tags: tag_list::TagList::new(vec![String::from("Fetching Tags")]),
         };
+        ui.tags = tag_list::TagList::new_with_result(tags::Tags::get_tags(ui.repo.get()));
 
         //setup tui
         let stdout = io::stdout().into_raw_mode().unwrap();
@@ -74,14 +74,8 @@ impl Ui {
                 Ok(Key::Char('\n')) => {
                     if ui.state == State::EditRepo {
                         ui.repo.confirm();
-                        match tags::Tags::get_tags(ui.repo.get()) {
-                            Ok(lines) => ui.tags = tag_list::TagList::new(lines),
-                            Err(_) => {
-                                ui.tags = tag_list::TagList::new_line(
-                                    "Error fetich tags. Is there a typo in the Repository?",
-                                );
-                            }
-                        }
+                        ui.tags =
+                            tag_list::TagList::new_with_result(tags::Tags::get_tags(ui.repo.get()));
                     }
                 }
                 Ok(Key::Char(key)) => {

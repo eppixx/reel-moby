@@ -2,6 +2,7 @@ use termion::event::Key;
 use tui::style::{Color, Style};
 use tui::widgets::{Block, Borders, List, ListState};
 
+use crate::tags::Error;
 use crate::ui::State;
 
 pub struct TagList {
@@ -21,6 +22,13 @@ impl TagList {
         Self {
             list: vec![String::from(line)],
             state: ListState::default(),
+        }
+    }
+
+    pub fn new_with_result(result: Result<Vec<String>, Error>) -> Self {
+        match result {
+            Ok(lines) => Self::new(lines),
+            Err(_) => Self::new_line("Error fetching tags. Is there a typo in the Repository?"),
         }
     }
 
