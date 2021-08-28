@@ -3,6 +3,8 @@ use tui::layout::Alignment;
 use tui::style::{Color, Style};
 use tui::widgets::{Block, Borders, Paragraph};
 
+use crate::ui::State;
+
 pub struct RepoEntry {
     text: String,
     old_text: String,
@@ -22,39 +24,54 @@ impl RepoEntry {
         self.text.clone()
     }
 
-    pub fn render(&self) -> Paragraph {
+    pub fn render(&self, state: &crate::ui::State) -> Paragraph {
         let title = match self.changed {
             true => "Repository*",
             false => "Repository",
         };
+
+        let border_style = if state == &crate::ui::State::EditRepo {
+            Style::default().fg(Color::Green)
+        } else {
+            Style::default().fg(Color::Gray)
+        };
+
         Paragraph::new(self.text.clone())
-            .block(Block::default().title(title).borders(Borders::ALL))
+            .block(
+                Block::default()
+                    .title(title)
+                    .borders(Borders::ALL)
+                    .border_style(border_style),
+            )
             .style(Style::default().fg(Color::White).bg(Color::Black))
             .alignment(Alignment::Left)
     }
 
-    pub fn confirm(&mut self) {
-        self.old_text = self.text.clone();
-        self.changed = false;
-    }
-}
+    pub fn handle_input(&mut self, state: &State, key: termion::event::Key) {
+        if state != &State::EditRepo {
+            return;
+        }
 
-impl super::Widget for RepoEntry {
-    fn input(&mut self, key: termion::event::Key) {
         match key {
-            Key::Esc => {
-                self.text = self.old_text.clone(); //TODO return to other structure
-                self.changed = false;
+            // Key::Char('\n') => self.confirm(), //handled in Ui
+            Key::Char(c) => {
+                self.text.push(c);
+                self.changed = true;
             }
             Key::Backspace => {
                 self.text.pop();
                 self.changed = true;
             }
-            Key::Char(c) => {
-                self.text.push(c);
-                self.changed = true;
+            Key::Esc => {
+                self.text = self.old_text.clone();
+                self.changed = false;
             }
             _ => (),
         }
+    }
+
+    pub fn confirm(&mut self) {
+        self.old_text = self.text.clone();
+        self.changed = false;
     }
 }

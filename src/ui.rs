@@ -11,7 +11,7 @@ use tui::Terminal;
 use crate::tags;
 use crate::widget::repo_entry;
 use crate::widget::tag_list;
-use crate::widget::Widget;
+// use crate::widget::Widget;
 
 pub struct Ui {
     state: State,
@@ -51,14 +51,20 @@ impl Ui {
                         .constraints([Constraint::Length(3), Constraint::Min(1)].as_ref())
                         .split(rect.size());
 
-                    rect.render_widget(ui.repo.render(), chunks[0]);
-                    let (list, state) = ui.tags.render();
+                    rect.render_widget(ui.repo.render(&ui.state), chunks[0]);
+                    let (list, state) = ui.tags.render(&ui.state);
                     rect.render_stateful_widget(list, chunks[1], state);
                 })
                 .unwrap();
 
             //handle input
             match receiver.try_recv() {
+                Ok(Key::Char('\t')) => {
+                    ui.state = match ui.state {
+                        State::EditRepo => State::SelectTag,
+                        State::SelectTag => State::EditRepo,
+                    };
+                }
                 Ok(Key::Ctrl('q')) => break 'core, //quit program without saving
                 Ok(Key::Ctrl('s')) => {
                     if ui.state == State::SelectTag {
@@ -67,34 +73,34 @@ impl Ui {
                 }
                 Ok(Key::Char('\n')) => {
                     if ui.state == State::EditRepo {
-                        ui.state = State::SelectTag;
                         ui.repo.confirm();
-                        //TODO query tags and show them switch
                         match tags::Tags::get_tags(ui.repo.get()) {
                             Ok(lines) => ui.tags = tag_list::TagList::new(lines),
-                            Err(_) => (),
+                            Err(_) => {
+                                ui.tags = tag_list::TagList::new_line(
+                                    "Error fetich tags. Is there a typo in the Repository?",
+                                );
+                            }
                         }
                     }
                 }
-                Ok(Key::Down) => {
-                    if ui.state == State::SelectTag {
-                        ui.tags.next();
+                Ok(Key::Char(key)) => {
+                    if ui.state == State::EditRepo {
+                        ui.tags = tag_list::TagList::new_line("Editing Repository");
                     }
-                }
-                Ok(Key::Up) => {
-                    if ui.state == State::SelectTag {
-                        ui.tags.previous();
-                    }
+                    ui.repo.handle_input(&ui.state, Key::Char(key));
+                    ui.tags.handle_input(&ui.state, Key::Char(key));
                 }
                 Ok(Key::Backspace) => {
-                    ui.state = State::EditRepo;
-                    ui.repo.input(Key::Backspace);
-                    ui.tags = tag_list::TagList::new(vec![String::from("editing Repository")]);
+                    if ui.state == State::EditRepo {
+                        ui.tags = tag_list::TagList::new_line("Editing Repository");
+                    }
+                    ui.repo.handle_input(&ui.state, Key::Backspace);
+                    ui.tags.handle_input(&ui.state, Key::Backspace);
                 }
                 Ok(key) => {
-                    ui.state = State::EditRepo;
-                    ui.repo.input(key);
-                    ui.tags = tag_list::TagList::new(vec![String::from("editing Repository")]);
+                    ui.repo.handle_input(&ui.state, key);
+                    ui.tags.handle_input(&ui.state, key);
                 }
                 _ => (),
             }

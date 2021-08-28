@@ -1,5 +1,8 @@
+use termion::event::Key;
 use tui::style::{Color, Style};
 use tui::widgets::{Block, Borders, List, ListState};
+
+use crate::ui::State;
 
 pub struct TagList {
     list: Vec<String>,
@@ -14,7 +17,20 @@ impl TagList {
         }
     }
 
-    pub fn render(&mut self) -> (List, &mut ListState) {
+    pub fn new_line(line: &str) -> Self {
+        Self {
+            list: vec![String::from(line)],
+            state: ListState::default(),
+        }
+    }
+
+    pub fn render(&mut self, state: &State) -> (List, &mut ListState) {
+        let border_style = if state == &State::SelectTag {
+            Style::default().fg(Color::Green)
+        } else {
+            Style::default().fg(Color::Gray)
+        };
+
         let items: Vec<tui::widgets::ListItem> = self
             .list
             .iter()
@@ -26,12 +42,29 @@ impl TagList {
 
         // Create a List from all list items and highlight the currently selected one
         let items = List::new(items)
-            .block(Block::default().title("Tags").borders(Borders::ALL))
+            .block(
+                Block::default()
+                    .title("Tags")
+                    .borders(Borders::ALL)
+                    .border_style(border_style),
+            )
             .style(Style::default().fg(Color::White).bg(Color::Black))
             .highlight_style(Style::default().bg(Color::Black))
             .highlight_symbol(">>");
 
         (items, &mut self.state)
+    }
+
+    pub fn handle_input(&mut self, state: &State, key: termion::event::Key) {
+        if state != &State::SelectTag {
+            return;
+        }
+
+        match key {
+            Key::Down => self.next(),
+            Key::Up => self.previous(),
+            _ => (),
+        }
     }
 
     pub fn next(&mut self) {
