@@ -24,6 +24,11 @@ impl RepoEntry {
         self.text.clone()
     }
 
+    pub fn set(&mut self, entry: String) {
+        self.text = entry.clone();
+        self.old_text = entry;
+    }
+
     pub fn render(&self, state: &crate::ui::State) -> Paragraph {
         let title = match self.changed {
             true => "Repository*",
