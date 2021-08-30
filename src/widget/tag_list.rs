@@ -32,6 +32,13 @@ impl TagList {
         }
     }
 
+    pub fn get(&self) -> Option<String> {
+        match self.state.selected() {
+            None => None,
+            Some(i) => Some(self.list[i].clone()),
+        }
+    }
+
     pub fn render(&mut self, state: &State) -> (List, &mut ListState) {
         let border_style = if state == &State::SelectTag {
             Style::default().fg(Color::Green)

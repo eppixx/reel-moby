@@ -27,6 +27,16 @@ pub enum State {
     SelectService,
 }
 
+impl State {
+    fn next(&self) -> State {
+        match self {
+            State::EditRepo => State::SelectTag,
+            State::SelectTag => State::SelectService,
+            State::SelectService => State::EditRepo,
+        }
+    }
+}
+
 impl Ui {
     pub fn run(repo_id: &str) {
         let mut ui = Ui {
@@ -72,26 +82,23 @@ impl Ui {
 
             //handle input
             match receiver.try_recv() {
-                Ok(Key::Char('\t')) => {
-                    ui.state = match ui.state {
-                        State::EditRepo => State::SelectTag,
-                        State::SelectTag => State::SelectService,
-                        State::SelectService => State::EditRepo,
-                    };
-                }
                 Ok(Key::Ctrl('q')) => break 'core, //quit program without saving
-                Ok(Key::Ctrl('s')) => {
-                    if ui.state == State::SelectTag {
-                        //TODO save currently selected tag
-                    }
-                }
-                Ok(Key::Char('\n')) => {
-                    if ui.state == State::EditRepo {
+                Ok(Key::Char('\t')) => ui.state = ui.state.next(),
+                Ok(Key::Ctrl('s')) => ui.services.save(),
+                Ok(Key::Char('\n')) => match ui.state {
+                    State::EditRepo => {
                         ui.repo.confirm();
                         ui.tags =
                             tag_list::TagList::new_with_result(tags::Tags::get_tags(ui.repo.get()));
                     }
-                }
+                    State::SelectTag => {
+                        let mut repo = ui.services.extract_repo().unwrap();
+                        let tag = ui.tags.get().unwrap();
+                        repo.push_str(&tag);
+                        ui.services.change_current_line(repo);
+                    }
+                    _ => (),
+                },
                 Ok(Key::Char(key)) => {
                     if ui.state == State::EditRepo {
                         ui.tags = tag_list::TagList::new_line("Editing Repository");
@@ -109,7 +116,7 @@ impl Ui {
                 Ok(Key::Up) => {
                     if ui.state == State::SelectService && ui.services.find_previous_match() {
                         match ui.services.extract_repo() {
-                            Err(_) => (), //TODO handle
+                            Err(_) => ui.tags = tag_list::TagList::new_line("no image found"),
                             Ok(s) => ui.repo.set(s),
                         }
                     }
@@ -119,7 +126,7 @@ impl Ui {
                 Ok(Key::Down) => {
                     if ui.state == State::SelectService && ui.services.find_next_match() {
                         match ui.services.extract_repo() {
-                            Err(_) => (), //TODO handle
+                            Err(_) => ui.tags = tag_list::TagList::new_line("no image found"),
                             Ok(s) => ui.repo.set(s),
                         }
                     }

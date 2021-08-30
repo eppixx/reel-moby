@@ -1,13 +1,15 @@
-// use std::fs::File;
-// use std::io::BufWriter;
+use std::fs::File;
+use std::io::BufRead;
+use std::io::BufReader;
+use std::io::Write;
 
 use regex::Regex;
-use termion::event::Key;
 use tui::style::{Color, Style};
 use tui::widgets::{Block, Borders, List, ListState};
 
 use crate::ui::State;
 
+#[derive(Debug)]
 pub enum Error {
     NoneSelected,
     Parsing(String),
@@ -21,18 +23,20 @@ pub struct ServiceSwitcher {
 
 impl ServiceSwitcher {
     pub fn new() -> Self {
-        let list: Vec<String> = vec![
-            String::from("dies"),
-            String::from("ist"),
-            String::from("  image: rocketchat/rocket.chat:latest"),
-            String::from("ein"),
-            String::from("test"),
-            String::from("  image: sdfsfdsf:latest"),
-        ];
+        let list = match File::open("docker-compose.yml") {
+            Err(e) => vec![format!("no docker-compose.yml: {}", e)],
+            Ok(file) => {
+                let buf = BufReader::new(file);
+                buf.lines()
+                    .map(|l| l.expect("Could not parse line"))
+                    .collect()
+            }
+        };
+
         Self {
             list,
             state: ListState::default(),
-            regex: Regex::new(r"^ *image *:.*").unwrap(),
+            regex: Regex::new(r"( *image *): *(.*):([.*]??) *").unwrap(),
         }
     }
 
@@ -127,15 +131,33 @@ impl ServiceSwitcher {
         false
     }
 
+    //return the repository from currently selected row
     pub fn extract_repo(&self) -> Result<String, Error> {
-        let regex = Regex::new(r"( *image *): *(.*[:.*]?) *").unwrap();
         match self.state.selected() {
             None => return Err(Error::NoneSelected),
             Some(i) => {
-                let caps = regex.captures(&self.list[i]).unwrap();
+                let caps = match self.regex.captures(&self.list[i]) {
+                    None => return Err(Error::Parsing(String::from("Nothing found"))),
+                    Some(cap) => cap,
+                };
                 let result: String = caps.get(2).unwrap().as_str().to_string();
                 return Ok(result);
             }
+        }
+    }
+
+    pub fn change_current_line(&mut self, repo_with_tag: String) {
+        match self.state.selected() {
+            None => (),
+            Some(i) => self.list[i] = repo_with_tag,
+        }
+    }
+
+    pub fn save(&self) {
+        let name = "docker-compose.yml";
+        let mut file = File::open(name).unwrap();
+        for line in &self.list {
+            file.write_all(line.as_bytes()).unwrap();
         }
     }
 }
