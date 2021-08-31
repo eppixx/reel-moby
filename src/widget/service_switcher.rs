@@ -149,15 +149,26 @@ impl ServiceSwitcher {
     pub fn change_current_line(&mut self, repo_with_tag: String) {
         match self.state.selected() {
             None => (),
-            Some(i) => self.list[i] = repo_with_tag,
+            Some(i) => {
+                let caps = match self.regex.captures(&self.list[i]) {
+                    None => return,
+                    Some(cap) => cap,
+                };
+                let mut line = caps.get(1).unwrap().as_str().to_string();
+                line.push_str(": ");
+                line.push_str(&repo_with_tag);
+                self.list[i] = line;
+            }
         }
     }
 
-    pub fn save(&self) {
-        let name = "docker-compose.yml";
-        let mut file = File::open(name).unwrap();
+    pub fn save(&self) -> Result<(), std::io::Error> {
+        let name = "docker-compose.yml2";
+        let mut file = File::create(name)?;
         for line in &self.list {
-            file.write_all(line.as_bytes()).unwrap();
+            file.write_all(line.as_bytes())?;
+            file.write_all("\n".as_bytes())?;
         }
+        Ok(())
     }
 }

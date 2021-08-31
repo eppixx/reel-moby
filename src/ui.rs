@@ -84,7 +84,12 @@ impl Ui {
             match receiver.try_recv() {
                 Ok(Key::Ctrl('q')) => break 'core, //quit program without saving
                 Ok(Key::Char('\t')) => ui.state = ui.state.next(),
-                Ok(Key::Ctrl('s')) => ui.services.save(),
+                Ok(Key::Ctrl('s')) => {
+                    match ui.services.save() {
+                        Err(_) => (), //TODO proper error handling
+                        Ok(_) => (),
+                    }
+                }
                 Ok(Key::Char('\n')) => match ui.state {
                     State::EditRepo => {
                         ui.repo.confirm();
@@ -119,9 +124,16 @@ impl Ui {
                             Err(_) => ui.tags = tag_list::TagList::new_line("no image found"),
                             Ok(s) => ui.repo.set(s),
                         }
+                    } else if ui.state == State::SelectTag {
+                        ui.tags.handle_input(&ui.state, Key::Up);
+                        //update repo widget
+                        let mut repo = ui.services.extract_repo().unwrap();
+                        let tag = ui.tags.get().unwrap();
+                        repo.push_str(":");
+                        repo.push_str(&tag);
+                        ui.repo.set(repo);
                     }
                     ui.repo.handle_input(&ui.state, Key::Up);
-                    ui.tags.handle_input(&ui.state, Key::Up);
                 }
                 Ok(Key::Down) => {
                     if ui.state == State::SelectService && ui.services.find_next_match() {
