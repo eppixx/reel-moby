@@ -169,7 +169,7 @@ impl ServiceSwitcher {
     }
 
     pub fn save(&mut self) -> Result<(), std::io::Error> {
-        let name = "docker-compose.yml2";
+        let name = "docker-compose.yml";
         let mut file = File::create(name)?;
         for line in &self.list {
             file.write_all(line.as_bytes())?;

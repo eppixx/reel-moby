@@ -83,19 +83,20 @@ impl Ui {
             match receiver.try_recv() {
                 Ok(Key::Ctrl('q')) => break 'core, //quit program without saving
                 Ok(Key::Char('\t')) => ui.state = ui.state.next(),
-                Ok(Key::Ctrl('s')) => {
-                    match ui.services.save() {
-                        Err(_) => (), //TODO proper error handling
-                        Ok(_) => (),
-                    }
-                }
+                Ok(Key::Ctrl('s')) => match ui.services.save() {
+                    Err(_) => continue,
+                    Ok(_) => (),
+                },
                 Ok(Key::Char('\n')) => match ui.state {
                     State::EditRepo => {
                         ui.repo.confirm();
                         ui.tags = tag_list::TagList::with_repo(ui.repo.get());
                     }
                     State::SelectTag => {
-                        let mut repo = ui.services.extract_repo().unwrap();
+                        let mut repo = match ui.services.extract_repo() {
+                            Err(_) => continue,
+                            Ok(s) => s,
+                        };
                         let tag = match ui.tags.get_selected() {
                             Err(_) => continue,
                             Ok(tag) => tag,
@@ -123,7 +124,7 @@ impl Ui {
                 Ok(Key::Up) => {
                     if ui.state == State::SelectService && ui.services.find_previous_match() {
                         match ui.services.extract_repo() {
-                            Err(_) => ui.tags = tag_list::TagList::with_status("no image found"),
+                            Err(_) => ui.tags = tag_list::TagList::with_status("No image found"),
                             Ok(s) => ui.repo.set(s),
                         }
                     }
@@ -133,7 +134,7 @@ impl Ui {
                 Ok(Key::Down) => match ui.state {
                     State::SelectService if ui.services.find_next_match() => {
                         match ui.services.extract_repo() {
-                            Err(_) => ui.tags = tag_list::TagList::with_status("no image found"),
+                            Err(_) => ui.tags = tag_list::TagList::with_status("No image found"),
                             Ok(s) => {
                                 ui.repo.set(s);
                                 ui.tags = tag_list::TagList::with_repo(ui.repo.get());
@@ -155,6 +156,8 @@ impl Ui {
             //sleep for 32ms (30 fps)
             thread::sleep(std::time::Duration::from_millis(32));
         }
+
+        terminal.clear().unwrap();
     }
 
     pub fn spawn_stdin_channel(&self) -> mpsc::Receiver<termion::event::Key> {
