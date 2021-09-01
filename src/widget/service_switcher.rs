@@ -25,7 +25,7 @@ pub struct ServiceSwitcher {
 impl ServiceSwitcher {
     pub fn new() -> Self {
         let list = match File::open("docker-compose.yml") {
-            Err(e) => vec![format!("no docker-compose.yml: {}", e)],
+            Err(e) => vec![format!("No docker-compose.yml found: {}", e)],
             Ok(file) => {
                 let buf = BufReader::new(file);
                 buf.lines()
@@ -50,8 +50,8 @@ impl ServiceSwitcher {
         };
 
         let title = match &self.changed {
-            true => "*docker-compose.yml*",
-            false => "docker-compose.yml",
+            true => "File: *docker-compose.yml*",
+            false => "File: docker-compose.yml",
         };
 
         let items: Vec<tui::widgets::ListItem> = self

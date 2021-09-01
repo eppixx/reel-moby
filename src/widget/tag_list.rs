@@ -6,8 +6,7 @@ use crate::tags;
 use crate::ui::State;
 
 pub struct TagList {
-    tags: Option<tags::Tags>,
-    line: String,
+    typ: Type,
     state: ListState,
 }
 
@@ -16,46 +15,51 @@ pub enum Error {
     NoTags,
 }
 
-impl TagList {
-    pub fn new(repo: String) -> Self {
-        let (tags, line) = match tags::Tags::new(repo) {
-            Err(_) => (None, String::from("Could not query tags")),
-            Ok(tags) => (Some(tags), String::new()),
-        };
+pub enum Type {
+    Status(String),
+    Repo(tags::Tags),
+}
 
+impl TagList {
+    pub fn new(typ: Type) -> Self {
         Self {
-            tags,
-            line,
+            typ,
             state: ListState::default(),
         }
     }
 
-    pub fn new_line(line: &str) -> Self {
-        Self {
-            tags: None,
-            line: String::from(line),
-            state: ListState::default(),
+    pub fn with_status(status: &str) -> Self {
+        Self::new(Type::Status(String::from(status)))
+    }
+
+    pub fn with_repo(name: String) -> Self {
+        match tags::Tags::new(name) {
+            Err(_) => Self::with_status("Couldn't query tags: no images found"),
+            Ok(tags) => Self::new(Type::Repo(tags)),
         }
     }
 
     fn print_lines(&self) -> Vec<String> {
-        match &self.tags {
-            None => vec![self.line.clone()],
-            Some(tags) => tags.results.iter().map(|r| format!("{}", r)).collect(),
+        match &self.typ {
+            Type::Status(line) => vec![line.to_string()],
+            Type::Repo(tags) => tags.results.iter().map(|r| format!("{}", r)).collect(),
         }
     }
 
     pub fn get_names(&self) -> Result<Vec<String>, Error> {
-        match &self.tags {
-            None => Err(Error::NoTags),
-            Some(tags) => Ok(tags.results.iter().map(|r| r.tag_name.clone()).collect()),
+        match &self.typ {
+            Type::Status(_) => Err(Error::NoTags),
+            Type::Repo(tags) => Ok(tags.results.iter().map(|r| r.tag_name.clone()).collect()),
         }
     }
 
     pub fn get_selected(&self) -> Result<String, Error> {
-        match self.state.selected() {
-            None => Err(Error::NoTags),
-            Some(i) => Ok(self.get_names().unwrap()[i].clone()),
+        match &self.typ {
+            Type::Status(_) => Err(Error::NoTags),
+            Type::Repo(_) => match self.state.selected() {
+                None => Err(Error::NoTags),
+                Some(i) => Ok(self.get_names().unwrap()[i].clone()),
+            },
         }
     }
 
@@ -66,9 +70,9 @@ impl TagList {
             Style::default().fg(Color::Gray)
         };
 
-        let lines = match &self.tags {
-            None => vec![self.line.clone()],
-            Some(_) => self.print_lines(),
+        let lines = match &self.typ {
+            Type::Status(line) => vec![line.clone()],
+            Type::Repo(_) => self.print_lines(),
         };
 
         let items: Vec<tui::widgets::ListItem> = lines

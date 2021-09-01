@@ -41,10 +41,10 @@ impl Ui {
         let mut ui = Ui {
             state: State::SelectService,
             repo: repo_entry::RepoEntry::new(repo_id),
-            tags: tag_list::TagList::new_line("Fetching Tags"),
+            tags: tag_list::TagList::with_status("Fetching Tags"),
             services: service_switcher::ServiceSwitcher::new(),
         };
-        ui.tags = tag_list::TagList::new(ui.repo.get());
+        ui.tags = tag_list::TagList::with_repo(ui.repo.get());
 
         //setup tui
         let stdout = io::stdout().into_raw_mode().unwrap();
@@ -92,11 +92,14 @@ impl Ui {
                 Ok(Key::Char('\n')) => match ui.state {
                     State::EditRepo => {
                         ui.repo.confirm();
-                        ui.tags = tag_list::TagList::new(ui.repo.get());
+                        ui.tags = tag_list::TagList::with_repo(ui.repo.get());
                     }
                     State::SelectTag => {
                         let mut repo = ui.services.extract_repo().unwrap();
-                        let tag = ui.tags.get_selected().unwrap();
+                        let tag = match ui.tags.get_selected() {
+                            Err(_) => continue,
+                            Ok(tag) => tag,
+                        };
                         repo.push_str(":");
                         repo.push_str(&tag);
                         ui.services.change_current_line(repo);
@@ -105,14 +108,14 @@ impl Ui {
                 },
                 Ok(Key::Char(key)) => {
                     if ui.state == State::EditRepo {
-                        ui.tags = tag_list::TagList::new_line("Editing Repository");
+                        ui.tags = tag_list::TagList::with_status("Editing Repository");
                     }
                     ui.repo.handle_input(&ui.state, Key::Char(key));
                     ui.tags.handle_input(&ui.state, Key::Char(key));
                 }
                 Ok(Key::Backspace) => {
                     if ui.state == State::EditRepo {
-                        ui.tags = tag_list::TagList::new_line("Editing Repository");
+                        ui.tags = tag_list::TagList::with_status("Editing Repository");
                     }
                     ui.repo.handle_input(&ui.state, Key::Backspace);
                     ui.tags.handle_input(&ui.state, Key::Backspace);
@@ -120,7 +123,7 @@ impl Ui {
                 Ok(Key::Up) => {
                     if ui.state == State::SelectService && ui.services.find_previous_match() {
                         match ui.services.extract_repo() {
-                            Err(_) => ui.tags = tag_list::TagList::new_line("no image found"),
+                            Err(_) => ui.tags = tag_list::TagList::with_status("no image found"),
                             Ok(s) => ui.repo.set(s),
                         }
                     }
@@ -130,10 +133,10 @@ impl Ui {
                 Ok(Key::Down) => match ui.state {
                     State::SelectService if ui.services.find_next_match() => {
                         match ui.services.extract_repo() {
-                            Err(_) => ui.tags = tag_list::TagList::new_line("no image found"),
+                            Err(_) => ui.tags = tag_list::TagList::with_status("no image found"),
                             Ok(s) => {
                                 ui.repo.set(s);
-                                ui.tags = tag_list::TagList::new(ui.repo.get());
+                                ui.tags = tag_list::TagList::with_repo(ui.repo.get());
                             }
                         }
                     }
