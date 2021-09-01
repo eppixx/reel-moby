@@ -93,10 +93,7 @@ impl Ui {
                         ui.tags = tag_list::TagList::with_repo(ui.repo.get());
                     }
                     State::SelectTag => {
-                        let mut repo = match ui.services.extract_repo() {
-                            Err(_) => continue,
-                            Ok(s) => s,
-                        };
+                        let mut repo = ui.repo.get();
                         let tag = match ui.tags.get_selected() {
                             Err(_) => continue,
                             Ok(tag) => tag,
@@ -136,8 +133,11 @@ impl Ui {
                         match ui.services.extract_repo() {
                             Err(_) => ui.tags = tag_list::TagList::with_status("No image found"),
                             Ok(s) => {
-                                ui.repo.set(s);
-                                ui.tags = tag_list::TagList::with_repo(ui.repo.get());
+                                let repo = match crate::tags::Tags::check_repo(s) {
+                                    Err(_) => continue,
+                                    Ok(s) => s,
+                                };
+                                ui.repo.set(repo);
                             }
                         }
                     }

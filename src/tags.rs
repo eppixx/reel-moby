@@ -29,6 +29,7 @@ pub struct Tags {
     pub results: Vec<Images>,
 }
 
+#[derive(Debug)]
 pub enum Error {
     InvalidCharacter(char),
     Fetching(String),
@@ -37,12 +38,8 @@ pub enum Error {
 
 impl Tags {
     pub fn new(repo: String) -> Result<Self, Error> {
+        // let repo = Self::check_repo(repo)?;
         let request = format!("https://hub.docker.com/v2/repositories/{}/tags", repo);
-
-        //check for right set of characters
-        if request.bytes().any(|c| !c.is_ascii()) {
-            return Err(Error::InvalidCharacter('a'));
-        }
 
         //get response
         let res = match reqwest::blocking::get(request) {
@@ -60,14 +57,18 @@ impl Tags {
         Ok(tags)
     }
 
-    pub fn get_images(&self) -> &Vec<Images> {
-        &self.results
-    }
-}
+    pub fn check_repo(mut name: String) -> Result<String, Error> {
+        //check for right set of characters
+        if name.bytes().any(|c| !c.is_ascii()) {
+            return Err(Error::InvalidCharacter('a'));
+        }
 
-impl Images {
-    pub fn get_name(&self) -> &str {
-        &self.tag_name
+        //check if need to inject "library" of given repo
+        let regex = regex::Regex::new(r".*/.*").unwrap();
+        if !regex.is_match(&name) {
+            name.insert_str(0, "library/");
+        }
+        Ok(name)
     }
 }
 
