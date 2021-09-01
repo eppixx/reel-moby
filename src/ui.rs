@@ -8,7 +8,6 @@ use tui::backend::TermionBackend;
 use tui::layout::{Constraint, Direction, Layout};
 use tui::Terminal;
 
-use crate::tags;
 use crate::widget::repo_entry;
 use crate::widget::service_switcher;
 use crate::widget::tag_list;
@@ -42,10 +41,10 @@ impl Ui {
         let mut ui = Ui {
             state: State::SelectService,
             repo: repo_entry::RepoEntry::new(repo_id),
-            tags: tag_list::TagList::new(vec![String::from("Fetching Tags")]),
+            tags: tag_list::TagList::new_line("Fetching Tags"),
             services: service_switcher::ServiceSwitcher::new(),
         };
-        ui.tags = tag_list::TagList::new_with_result(tags::Tags::get_tags(ui.repo.get()));
+        ui.tags = tag_list::TagList::new(ui.repo.get());
 
         //setup tui
         let stdout = io::stdout().into_raw_mode().unwrap();
@@ -93,12 +92,12 @@ impl Ui {
                 Ok(Key::Char('\n')) => match ui.state {
                     State::EditRepo => {
                         ui.repo.confirm();
-                        ui.tags =
-                            tag_list::TagList::new_with_result(tags::Tags::get_tags(ui.repo.get()));
+                        ui.tags = tag_list::TagList::new(ui.repo.get());
                     }
                     State::SelectTag => {
                         let mut repo = ui.services.extract_repo().unwrap();
-                        let tag = ui.tags.get().unwrap();
+                        let tag = ui.tags.get_selected().unwrap();
+                        repo.push_str(":");
                         repo.push_str(&tag);
                         ui.services.change_current_line(repo);
                     }
@@ -124,29 +123,27 @@ impl Ui {
                             Err(_) => ui.tags = tag_list::TagList::new_line("no image found"),
                             Ok(s) => ui.repo.set(s),
                         }
-                    } else if ui.state == State::SelectTag {
-                        ui.tags.handle_input(&ui.state, Key::Up);
-                        //update repo widget
-                        let mut repo = ui.services.extract_repo().unwrap();
-                        let tag = ui.tags.get().unwrap();
-                        repo.push_str(":");
-                        repo.push_str(&tag);
-                        ui.repo.set(repo);
                     }
+                    ui.tags.handle_input(&ui.state, Key::Up);
                     ui.repo.handle_input(&ui.state, Key::Up);
                 }
-                Ok(Key::Down) => {
-                    if ui.state == State::SelectService && ui.services.find_next_match() {
+                Ok(Key::Down) => match ui.state {
+                    State::SelectService if ui.services.find_next_match() => {
                         match ui.services.extract_repo() {
                             Err(_) => ui.tags = tag_list::TagList::new_line("no image found"),
-                            Ok(s) => ui.repo.set(s),
+                            Ok(s) => {
+                                ui.repo.set(s);
+                                ui.tags = tag_list::TagList::new(ui.repo.get());
+                            }
                         }
                     }
-                    ui.repo.handle_input(&ui.state, Key::Down);
-                    ui.tags.handle_input(&ui.state, Key::Down);
-                }
+                    _ => {
+                        ui.tags.handle_input(&ui.state, Key::Down);
+                        ui.repo.handle_input(&ui.state, Key::Down);
+                    }
+                },
                 Ok(key) => {
-                    ui.repo.handle_input(&ui.state, key);
+                    ui.repo.handle_input(&ui.state, Key::Down);
                     ui.tags.handle_input(&ui.state, key);
                 }
                 _ => (),

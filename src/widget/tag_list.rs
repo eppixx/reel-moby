@@ -2,40 +2,60 @@ use termion::event::Key;
 use tui::style::{Color, Style};
 use tui::widgets::{Block, Borders, List, ListState};
 
-use crate::tags::Error;
+use crate::tags;
 use crate::ui::State;
 
 pub struct TagList {
-    list: Vec<String>,
+    tags: Option<tags::Tags>,
+    line: String,
     state: ListState,
 }
 
+#[derive(Debug)]
+pub enum Error {
+    NoTags,
+}
+
 impl TagList {
-    pub fn new(items: Vec<String>) -> Self {
+    pub fn new(repo: String) -> Self {
+        let (tags, line) = match tags::Tags::new(repo) {
+            Err(_) => (None, String::from("Could not query tags")),
+            Ok(tags) => (Some(tags), String::new()),
+        };
+
         Self {
-            list: items,
+            tags,
+            line,
             state: ListState::default(),
         }
     }
 
     pub fn new_line(line: &str) -> Self {
         Self {
-            list: vec![String::from(line)],
+            tags: None,
+            line: String::from(line),
             state: ListState::default(),
         }
     }
 
-    pub fn new_with_result(result: Result<Vec<String>, Error>) -> Self {
-        match result {
-            Ok(lines) => Self::new(lines),
-            Err(_) => Self::new_line("Error fetching tags. Is there a typo in the Repository?"),
+    fn print_lines(&self) -> Vec<String> {
+        match &self.tags {
+            None => vec![self.line.clone()],
+            Some(tags) => tags.results.iter().map(|r| format!("{}", r)).collect(),
         }
     }
 
-    pub fn get(&self) -> Option<String> {
+    pub fn get_names(&self) -> Result<Vec<String>, Error> {
+        match &self.tags {
+            None => Err(Error::NoTags),
+            Some(tags) => Ok(tags.results.iter().map(|r| r.tag_name.clone()).collect()),
+        }
+    }
+
+    pub fn get_selected(&self) -> Result<String, Error> {
         match self.state.selected() {
-            None => None,
-            Some(i) => Some(self.list[i].clone()),
+            None => Err(Error::NoTags),
+            Some(i) => Ok(self.get_names().unwrap()[i].clone()),
         }
     }
 
@@ -46,11 +66,15 @@ impl TagList {
             Style::default().fg(Color::Gray)
         };
 
-        let items: Vec<tui::widgets::ListItem> = self
-            .list
+        let lines = match &self.tags {
+            None => vec![self.line.clone()],
+            Some(_) => self.print_lines(),
+        };
+
+        let items: Vec<tui::widgets::ListItem> = lines
             .iter()
             .map(|l| {
-                tui::widgets::ListItem::new(l.as_ref())
+                tui::widgets::ListItem::new(l.clone())
                     .style(Style::default().fg(Color::White).bg(Color::Black))
             })
             .collect();
@@ -84,18 +108,20 @@ impl TagList {
 
     pub fn next(&mut self) {
         match self.state.selected() {
-            None if self.list.len() > 0 => self.state.select(Some(0)),
+            None if self.print_lines().len() > 0 => self.state.select(Some(0)),
             None => (),
-            Some(i) if i == self.list.len() - 1 => self.state.select(Some(0)),
+            Some(i) if i == self.print_lines().len() - 1 => self.state.select(Some(0)),
             Some(i) => self.state.select(Some(i + 1)),
         }
     }
 
     pub fn previous(&mut self) {
         match self.state.selected() {
-            None if self.list.len() > 0 => self.state.select(Some(self.list.len())),
+            None if self.print_lines().len() > 0 => {
+                self.state.select(Some(self.print_lines().len()))
+            }
             None => (),
-            Some(i) if i == 0 => self.state.select(Some(self.list.len() - 1)),
+            Some(i) if i == 0 => self.state.select(Some(self.print_lines().len() - 1)),
             Some(i) => self.state.select(Some(i - 1)),
         }
     }

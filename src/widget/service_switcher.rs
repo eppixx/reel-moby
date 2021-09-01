@@ -19,6 +19,7 @@ pub struct ServiceSwitcher {
     list: Vec<String>,
     state: ListState,
     regex: Regex,
+    changed: bool,
 }
 
 impl ServiceSwitcher {
@@ -37,6 +38,7 @@ impl ServiceSwitcher {
             list,
             state: ListState::default(),
             regex: Regex::new(r"( *image *): *(.*):([.*]??) *").unwrap(),
+            changed: false,
         }
     }
 
@@ -45,6 +47,11 @@ impl ServiceSwitcher {
             Style::default().fg(Color::Green)
         } else {
             Style::default().fg(Color::Gray)
+        };
+
+        let title = match &self.changed {
+            true => "*docker-compose.yml*",
+            false => "docker-compose.yml",
         };
 
         let items: Vec<tui::widgets::ListItem> = self
@@ -60,7 +67,7 @@ impl ServiceSwitcher {
         let items = List::new(items)
             .block(
                 Block::default()
-                    .title("Tags")
+                    .title(title)
                     .borders(Borders::ALL)
                     .border_style(border_style),
             )
@@ -94,7 +101,6 @@ impl ServiceSwitcher {
         }
 
         //nothing found
-        self.state.select(None);
         false
     }
 
@@ -127,7 +133,6 @@ impl ServiceSwitcher {
         }
 
         //nothing found
-        self.state.select(None);
         false
     }
 
@@ -160,15 +165,18 @@ impl ServiceSwitcher {
                 self.list[i] = line;
             }
         }
+        self.changed = true;
     }
 
-    pub fn save(&self) -> Result<(), std::io::Error> {
+    pub fn save(&mut self) -> Result<(), std::io::Error> {
         let name = "docker-compose.yml2";
         let mut file = File::create(name)?;
         for line in &self.list {
             file.write_all(line.as_bytes())?;
             file.write_all("\n".as_bytes())?;
         }
+
+        self.changed = false;
         Ok(())
     }
 }
