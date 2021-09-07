@@ -106,14 +106,14 @@ impl Ui {
                 },
                 Ok(Key::Char(key)) => {
                     if ui.state == State::EditRepo {
-                        ui.tags = tag_list::TagList::with_status("Editing Repository");
+                        ui.show_info("Editing Repository");
                     }
                     ui.repo.handle_input(&ui.state, Key::Char(key));
                     ui.tags.handle_input(&ui.state, Key::Char(key));
                 }
                 Ok(Key::Backspace) => {
                     if ui.state == State::EditRepo {
-                        ui.tags = tag_list::TagList::with_status("Editing Repository");
+                        ui.show_info("Editing Repository");
                     }
                     ui.repo.handle_input(&ui.state, Key::Backspace);
                     ui.tags.handle_input(&ui.state, Key::Backspace);
@@ -121,7 +121,7 @@ impl Ui {
                 Ok(Key::Up) => {
                     if ui.state == State::SelectService && ui.services.find_previous_match() {
                         match ui.services.extract_repo() {
-                            Err(_) => ui.tags = tag_list::TagList::with_status("No image found"),
+                            Err(_) => ui.show_info("No image found"),
                             Ok(s) => ui.repo.set(s),
                         }
                     }
@@ -131,10 +131,13 @@ impl Ui {
                 Ok(Key::Down) => match ui.state {
                     State::SelectService if ui.services.find_next_match() => {
                         match ui.services.extract_repo() {
-                            Err(_) => ui.tags = tag_list::TagList::with_status("No image found"),
+                            Err(e) => ui.show_info(&format!("{}", e)),
                             Ok(s) => {
                                 let repo = match crate::tags::Tags::check_repo(s) {
-                                    Err(_) => continue,
+                                    Err(e) => {
+                                        ui.show_info(&format!("{}", e));
+                                        continue;
+                                    }
                                     Ok(s) => s,
                                 };
                                 ui.repo.set(repo);
@@ -158,6 +161,10 @@ impl Ui {
         }
 
         terminal.clear().unwrap();
+    }
+
+    fn show_info(&mut self, error: &str) {
+        self.tags = tag_list::TagList::with_status(error);
     }
 
     pub fn spawn_stdin_channel(&self) -> mpsc::Receiver<termion::event::Key> {

@@ -29,11 +29,21 @@ pub struct Tags {
     pub results: Vec<Images>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Display)]
 pub enum Error {
     InvalidCharacter(char),
     Fetching(String),
     Converting(String),
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Error::InvalidCharacter(c) => write!(f, "Invalid Character: {}", c),
+            Error::Fetching(s) => write!(f, "Fetching error: {}", s),
+            Error::Converting(s) => write!(f, "Converting error: {}", s),
+        }
+    }
 }
 
 impl Tags {
@@ -100,5 +110,30 @@ fn format_time_nice(time: chrono::Duration) -> String {
         format!("{} Minuten", time.num_minutes())
     } else {
         format!("{} Sekunden", time.num_seconds())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::tags;
+    #[test]
+    fn test_check_repo() {
+        let check_eq = |s, s2| {
+            assert_eq!(&tags::Tags::check_repo(String::from(s)).unwrap(), s2);
+        };
+        let check_neq = |s, s2| {
+            assert_ne!(&tags::Tags::check_repo(String::from(s)).unwrap(), s2);
+        };
+        let check_err = |s: &str| {
+            assert_eq!(tags::Tags::check_repo(String::from(s)).is_err(), true);
+        };
+
+        check_eq("nginx", "library/nginx");
+        check_neq("nginx", "nginx");
+        check_eq("rocketchat/rocket.chat", "rocketchat/rocket.chat");
+        check_eq("mysql", "library/mysql");
+        check_neq("mysql", "mysql");
+        check_err("nginxä");
+        check_err("nginx²");
     }
 }

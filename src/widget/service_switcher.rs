@@ -1,3 +1,4 @@
+use std::fmt;
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
@@ -9,10 +10,19 @@ use tui::widgets::{Block, Borders, List, ListState};
 
 use crate::ui::State;
 
-#[derive(Debug)]
+#[derive(Debug, Display)]
 pub enum Error {
     NoneSelected,
     Parsing(String),
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Error::NoneSelected => write!(f, "None selected"),
+            Error::Parsing(s) => write!(f, "Parsing error: {}", s),
+        }
+    }
 }
 
 pub struct ServiceSwitcher {
