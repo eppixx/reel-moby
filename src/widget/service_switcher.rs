@@ -10,7 +10,7 @@ use tui::widgets::{Block, Borders, List, ListState};
 
 use crate::ui::State;
 
-#[derive(Debug, Display)]
+#[derive(Debug)]
 pub enum Error {
     NoneSelected,
     Parsing(String),

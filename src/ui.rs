@@ -41,10 +41,9 @@ impl Ui {
         let mut ui = Ui {
             state: State::SelectService,
             repo: repo_entry::RepoEntry::new(repo_id),
-            tags: tag_list::TagList::with_status("Fetching Tags"),
+            tags: tag_list::TagList::with_status("Select image or edit Repository"),
             services: service_switcher::ServiceSwitcher::new(),
         };
-        ui.tags = tag_list::TagList::with_repo(ui.repo.get());
 
         //setup tui
         let stdout = io::stdout().into_raw_mode().unwrap();
@@ -84,7 +83,10 @@ impl Ui {
                 Ok(Key::Ctrl('q')) => break 'core, //quit program without saving
                 Ok(Key::Char('\t')) => ui.state = ui.state.next(),
                 Ok(Key::Ctrl('s')) => match ui.services.save() {
-                    Err(_) => continue,
+                    Err(e) => {
+                        ui.show_info(&format!("{}", e));
+                        continue;
+                    }
                     Ok(_) => (),
                 },
                 Ok(Key::Char('\n')) => match ui.state {
@@ -95,7 +97,10 @@ impl Ui {
                     State::SelectTag => {
                         let mut repo = ui.repo.get();
                         let tag = match ui.tags.get_selected() {
-                            Err(_) => continue,
+                            Err(e) => {
+                                ui.show_info(&format!("{}", e));
+                                continue;
+                            }
                             Ok(tag) => tag,
                         };
                         repo.push_str(":");
@@ -121,8 +126,18 @@ impl Ui {
                 Ok(Key::Up) => {
                     if ui.state == State::SelectService && ui.services.find_previous_match() {
                         match ui.services.extract_repo() {
-                            Err(_) => ui.show_info("No image found"),
-                            Ok(s) => ui.repo.set(s),
+                            Err(e) => ui.show_info(&format!("{}", e)),
+                            Ok(s) => {
+                                let repo = match crate::tags::Tags::check_repo(s) {
+                                    Err(e) => {
+                                        ui.show_info(&format!("{}", e));
+                                        continue;
+                                    }
+                                    Ok(s) => s,
+                                };
+                                ui.repo.set(repo);
+                                ui.tags = tag_list::TagList::with_repo(ui.repo.get());
+                            }
                         }
                     }
                     ui.tags.handle_input(&ui.state, Key::Up);
@@ -141,6 +156,7 @@ impl Ui {
                                     Ok(s) => s,
                                 };
                                 ui.repo.set(repo);
+                                ui.tags = tag_list::TagList::with_repo(ui.repo.get());
                             }
                         }
                     }

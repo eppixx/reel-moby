@@ -1,3 +1,5 @@
+use std::fmt;
+
 use termion::event::Key;
 use tui::style::{Color, Style};
 use tui::widgets::{Block, Borders, List, ListState};
@@ -12,9 +14,18 @@ pub struct TagList {
 
 #[derive(Debug)]
 pub enum Error {
+    NoneSelected,
     NoTags,
 }
 
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Error::NoTags => write!(f, "There are no tags"),
+            Error::NoneSelected => write!(f, "No tag selected"),
+        }
+    }
+}
 pub enum Type {
     Status(String),
     Repo(tags::Tags),
@@ -34,7 +45,7 @@ impl TagList {
 
     pub fn with_repo(name: String) -> Self {
         match tags::Tags::new(name) {
-            Err(_) => Self::with_status("Couldn't query tags: no images found"),
+            Err(e) => Self::with_status(&format!("{}", e)),
             Ok(tags) => Self::new(Type::Repo(tags)),
         }
     }
@@ -57,7 +68,7 @@ impl TagList {
         match &self.typ {
             Type::Status(_) => Err(Error::NoTags),
             Type::Repo(_) => match self.state.selected() {
-                None => Err(Error::NoTags),
+                None => Err(Error::NoneSelected),
                 Some(i) => Ok(self.get_names().unwrap()[i].clone()),
             },
         }
