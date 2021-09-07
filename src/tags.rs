@@ -20,7 +20,6 @@ pub struct Images {
 
 #[derive(Deserialize)]
 pub struct Tags {
-    // count: i32,
     next_page: Option<String>,
     prev_page: Option<String>,
     pub results: Vec<Images>,
@@ -63,6 +62,7 @@ impl Tags {
         Ok(tags)
     }
 
+    /// checks the repo name and may add a prefix for official images
     pub fn check_repo(mut name: String) -> Result<String, Error> {
         //check for right set of characters
         if name.bytes().any(|c| !c.is_ascii()) {
@@ -87,6 +87,7 @@ impl fmt::Display for Images {
     }
 }
 
+/// converts a given duration to a readable string
 fn format_time_nice(time: chrono::Duration) -> String {
     if time.num_weeks() == 52 {
         format!("{} Jahr", (time.num_weeks() / 52) as i32)

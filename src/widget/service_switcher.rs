@@ -88,6 +88,7 @@ impl ServiceSwitcher {
         (items, &mut self.state)
     }
 
+    /// finds the next image tag in given file
     pub fn find_next_match(&mut self) -> bool {
         let current_line: usize = match self.state.selected() {
             None => 0,
@@ -114,6 +115,7 @@ impl ServiceSwitcher {
         false
     }
 
+    /// finds the previous image tag in given file
     pub fn find_previous_match(&mut self) -> bool {
         let current_line: usize = match self.state.selected() {
             None => 0,
@@ -146,7 +148,7 @@ impl ServiceSwitcher {
         false
     }
 
-    //return the repository from currently selected row
+    /// return the repository from currently selected row
     pub fn extract_repo(&self) -> Result<String, Error> {
         match self.state.selected() {
             None => return Err(Error::NoneSelected),
@@ -161,6 +163,7 @@ impl ServiceSwitcher {
         }
     }
 
+    /// replace currently selected line with repo and tag
     pub fn change_current_line(&mut self, repo_with_tag: String) {
         match self.state.selected() {
             None => (),
@@ -178,6 +181,7 @@ impl ServiceSwitcher {
         self.changed = true;
     }
 
+    /// save the currently opened file
     pub fn save(&mut self) -> Result<(), std::io::Error> {
         let name = "docker-compose.yml";
         let mut file = File::create(name)?;

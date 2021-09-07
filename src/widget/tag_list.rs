@@ -26,23 +26,27 @@ impl fmt::Display for Error {
         }
     }
 }
+
+/// used for creating a TagList
 pub enum Type {
     Status(String),
     Repo(tags::Tags),
 }
 
 impl TagList {
-    pub fn new(typ: Type) -> Self {
+    fn new(typ: Type) -> Self {
         Self {
             typ,
             state: ListState::default(),
         }
     }
 
+    /// create a TagList with a status message
     pub fn with_status(status: &str) -> Self {
         Self::new(Type::Status(String::from(status)))
     }
 
+    /// create a TagList
     pub fn with_repo(name: String) -> Self {
         match tags::Tags::new(name) {
             Err(e) => Self::with_status(&format!("{}", e)),
@@ -50,6 +54,7 @@ impl TagList {
         }
     }
 
+    /// get a list of tag names with info
     fn print_lines(&self) -> Vec<String> {
         match &self.typ {
             Type::Status(line) => vec![line.to_string()],
@@ -57,6 +62,7 @@ impl TagList {
         }
     }
 
+    /// get the list of tag names
     pub fn get_names(&self) -> Result<Vec<String>, Error> {
         match &self.typ {
             Type::Status(_) => Err(Error::NoTags),
@@ -64,6 +70,7 @@ impl TagList {
         }
     }
 
+    /// get the selected tag or return an error
     pub fn get_selected(&self) -> Result<String, Error> {
         match &self.typ {
             Type::Status(_) => Err(Error::NoTags),
@@ -121,6 +128,7 @@ impl TagList {
         }
     }
 
+    /// select next tag
     pub fn next(&mut self) {
         match self.state.selected() {
             None if self.print_lines().len() > 0 => self.state.select(Some(0)),
@@ -130,6 +138,7 @@ impl TagList {
         }
     }
 
+    /// select previous tag
     pub fn previous(&mut self) {
         match self.state.selected() {
             None if self.print_lines().len() > 0 => {

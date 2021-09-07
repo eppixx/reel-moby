@@ -179,10 +179,12 @@ impl Ui {
         terminal.clear().unwrap();
     }
 
+    /// helper function to show information in TagList
     fn show_info(&mut self, error: &str) {
         self.tags = tag_list::TagList::with_status(error);
     }
 
+    /// create a thread for catching input and send them to core loop
     pub fn spawn_stdin_channel(&self) -> mpsc::Receiver<termion::event::Key> {
         let (tx, rx) = mpsc::channel::<termion::event::Key>();
 

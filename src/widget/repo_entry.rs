@@ -75,6 +75,7 @@ impl RepoEntry {
         }
     }
 
+    /// set the widget to unchanged
     pub fn confirm(&mut self) {
         self.old_text = self.text.clone();
         self.changed = false;
