@@ -87,6 +87,7 @@ impl Tags {
         Ok(name)
     }
 
+    /// returns tags of next page
     pub fn next_page(&self) -> Result<Self, Error> {
         match &self.next_page {
             Some(url) => Self::with_url(url),
@@ -94,6 +95,7 @@ impl Tags {
         }
     }
 
+    /// returns tags of previous page
     pub fn prev_page(&self) -> Result<Self, Error> {
         match &self.prev_page {
             Some(url) => Self::with_url(url),

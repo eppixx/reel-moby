@@ -54,6 +54,7 @@ impl TagList {
         }
     }
 
+    /// display next page if possible
     pub fn next_page(&mut self) {
         match &self.typ {
             Type::Status(_) => (),
@@ -64,6 +65,7 @@ impl TagList {
         }
     }
 
+    /// display previous page if possible
     pub fn prev_page(&mut self) {
         match &self.typ {
             Type::Status(_) => (),
