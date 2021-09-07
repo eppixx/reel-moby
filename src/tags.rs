@@ -7,15 +7,12 @@ use serde::Deserialize;
 struct ImageDetails {
     architecture: String,
     os: String,
-    size: i32,
-    last_pulled: String,
-    last_pushed: String,
+    size: usize,
 }
 
 #[derive(Deserialize)]
 pub struct Images {
     images: Vec<ImageDetails>,
-    last_updater_username: String,
     #[serde(rename(deserialize = "name"))]
     pub tag_name: String,
     last_updated: String,
@@ -23,13 +20,13 @@ pub struct Images {
 
 #[derive(Deserialize)]
 pub struct Tags {
-    count: i32,
+    // count: i32,
     next_page: Option<String>,
     prev_page: Option<String>,
     pub results: Vec<Images>,
 }
 
-#[derive(Debug, Display)]
+#[derive(Debug)]
 pub enum Error {
     InvalidCharacter(char),
     Fetching(String),
@@ -48,20 +45,19 @@ impl fmt::Display for Error {
 
 impl Tags {
     pub fn new(repo: String) -> Result<Self, Error> {
-        // let repo = Self::check_repo(repo)?;
         let request = format!("https://hub.docker.com/v2/repositories/{}/tags", repo);
 
         //get response
         let res = match reqwest::blocking::get(request) {
             Ok(result) => result,
-            Err(_) => return Err(Error::Fetching(String::from("reqwest error"))),
+            Err(e) => return Err(Error::Fetching(format!("reqwest error: {}", e))),
         };
 
         //convert it to json
         let raw = res.text().unwrap();
         let tags: Self = match serde_json::from_str(&raw) {
             Ok(result) => result,
-            Err(_) => return Err(Error::Converting(String::from("invalid json"))),
+            Err(e) => return Err(Error::Converting(format!("invalid json: {}", e))),
         };
 
         Ok(tags)
@@ -135,5 +131,6 @@ mod tests {
         check_neq("mysql", "mysql");
         check_err("nginxä");
         check_err("nginx²");
+        check_eq("selim13/automysqlbackup", "selim13/automysqlbackup");
     }
 }
