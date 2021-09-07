@@ -20,7 +20,9 @@ pub struct Images {
 
 #[derive(Deserialize)]
 pub struct Tags {
+    #[serde(rename(deserialize = "next"))]
     next_page: Option<String>,
+    #[serde(rename(deserialize = "previous"))]
     prev_page: Option<String>,
     pub results: Vec<Images>,
 }
@@ -30,6 +32,8 @@ pub enum Error {
     InvalidCharacter(char),
     Fetching(String),
     Converting(String),
+    NoPrevPage,
+    NoNextPage,
 }
 
 impl fmt::Display for Error {
@@ -38,16 +42,22 @@ impl fmt::Display for Error {
             Error::InvalidCharacter(c) => write!(f, "Invalid Character: {}", c),
             Error::Fetching(s) => write!(f, "Fetching error: {}", s),
             Error::Converting(s) => write!(f, "Converting error: {}", s),
+            Error::NoNextPage => write!(f, "No next page available"),
+            Error::NoPrevPage => write!(f, "No previous page available"),
         }
     }
 }
 
 impl Tags {
+    /// fetches tag information with a repository name in the form of organization/repository or library/repository in the case of official images from docker
     pub fn new(repo: String) -> Result<Self, Error> {
         let request = format!("https://hub.docker.com/v2/repositories/{}/tags", repo);
+        Self::with_url(&request)
+    }
 
-        //get response
-        let res = match reqwest::blocking::get(request) {
+    /// fetches tag information from a url
+    fn with_url(url: &str) -> Result<Self, Error> {
+        let res = match reqwest::blocking::get(url) {
             Ok(result) => result,
             Err(e) => return Err(Error::Fetching(format!("reqwest error: {}", e))),
         };
@@ -75,6 +85,20 @@ impl Tags {
             name.insert_str(0, "library/");
         }
         Ok(name)
+    }
+
+    pub fn next_page(&self) -> Result<Self, Error> {
+        match &self.next_page {
+            Some(url) => Self::with_url(url),
+            None => Err(Error::NoNextPage),
+        }
+    }
+
+    pub fn prev_page(&self) -> Result<Self, Error> {
+        match &self.prev_page {
+            Some(url) => Self::with_url(url),
+            None => Err(Error::NoPrevPage),
+        }
     }
 }
 

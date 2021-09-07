@@ -7,11 +7,6 @@ use tui::widgets::{Block, Borders, List, ListState};
 use crate::tags;
 use crate::ui::State;
 
-pub struct TagList {
-    typ: Type,
-    state: ListState,
-}
-
 #[derive(Debug)]
 pub enum Error {
     NoneSelected,
@@ -33,6 +28,11 @@ pub enum Type {
     Repo(tags::Tags),
 }
 
+pub struct TagList {
+    typ: Type,
+    state: ListState,
+}
+
 impl TagList {
     fn new(typ: Type) -> Self {
         Self {
@@ -51,6 +51,26 @@ impl TagList {
         match tags::Tags::new(name) {
             Err(e) => Self::with_status(&format!("{}", e)),
             Ok(tags) => Self::new(Type::Repo(tags)),
+        }
+    }
+
+    pub fn next_page(&mut self) {
+        match &self.typ {
+            Type::Status(_) => (),
+            Type::Repo(tags) => match tags.next_page() {
+                Err(e) => self.typ = Type::Status(format!("{}", e)),
+                Ok(tags) => self.typ = Type::Repo(tags),
+            },
+        }
+    }
+
+    pub fn prev_page(&mut self) {
+        match &self.typ {
+            Type::Status(_) => (),
+            Type::Repo(tags) => match tags.prev_page() {
+                Err(e) => self.typ = Type::Status(format!("{}", e)),
+                Ok(tags) => self.typ = Type::Repo(tags),
+            },
         }
     }
 
