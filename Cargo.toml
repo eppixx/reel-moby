@@ -1,3 +1,4 @@
+
 [package]
 name = "query-docker-tags"
 version = "0.1.0"
@@ -13,3 +14,7 @@ chrono = "0.4.19"
 tui = "0.16"
 termion = "1.5"
 regex = "1.5.4"
+
+[profile.release]
+lto = "yes"
+opt-level = "z"
