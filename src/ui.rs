@@ -104,8 +104,14 @@ impl Ui {
                     ui.repo.confirm();
                     ui.tags = tag_list::TagList::with_repo(ui.repo.get());
                 }
-                Ok(Key::Ctrl('n')) => ui.tags.next_page(),
-                Ok(Key::Ctrl('p')) => ui.tags.prev_page(),
+                Ok(Key::Ctrl('n')) => match ui.tags.next_page() {
+                    Err(e) => ui.info.set_info(&format!("{}", e)),
+                    Ok(_) => (),
+                },
+                Ok(Key::Ctrl('p')) => match ui.tags.prev_page() {
+                    Err(e) => ui.info.set_info(&format!("{}", e)),
+                    Ok(_) => (),
+                },
                 Ok(Key::Char('\n')) => match ui.state {
                     State::EditRepo => {
                         ui.repo.confirm();

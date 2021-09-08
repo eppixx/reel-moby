@@ -11,6 +11,8 @@ use crate::ui::State;
 pub enum Error {
     NoneSelected,
     NoTags,
+    NoNextPage,
+    NoPrevPage,
 }
 
 impl fmt::Display for Error {
@@ -18,6 +20,8 @@ impl fmt::Display for Error {
         match self {
             Error::NoTags => write!(f, "There are no tags"),
             Error::NoneSelected => write!(f, "No tag selected"),
+            Error::NoNextPage => write!(f, "No next page available"),
+            Error::NoPrevPage => write!(f, "No previous page available"),
         }
     }
 }
@@ -55,25 +59,27 @@ impl TagList {
     }
 
     /// display next page if possible
-    pub fn next_page(&mut self) {
+    pub fn next_page(&mut self) -> Result<(), Error> {
         match &self.typ {
             Type::Status(_) => (),
             Type::Repo(tags) => match tags.next_page() {
-                Err(e) => self.typ = Type::Status(format!("{}", e)),
+                Err(e) => return Err(Error::NoNextPage),
                 Ok(tags) => self.typ = Type::Repo(tags),
             },
         }
+        Ok(())
     }
 
     /// display previous page if possible
-    pub fn prev_page(&mut self) {
+    pub fn prev_page(&mut self) -> Result<(), Error> {
         match &self.typ {
             Type::Status(_) => (),
             Type::Repo(tags) => match tags.prev_page() {
-                Err(e) => self.typ = Type::Status(format!("{}", e)),
+                Err(e) => return Err(Error::NoPrevPage),
                 Ok(tags) => self.typ = Type::Repo(tags),
             },
         }
+        Ok(())
     }
 
     /// get a list of tag names with info
