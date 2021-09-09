@@ -47,7 +47,7 @@ impl ServiceSwitcher {
         Self {
             list,
             state: ListState::default(),
-            regex: Regex::new(r"( *image *): *(.*):([.*]??) *").unwrap(),
+            regex: Regex::new(r"( *image *): *([^:]*):?([^:]?) *").unwrap(),
             changed: false,
         }
     }
