@@ -20,6 +20,7 @@ pub struct Images {
 
 #[derive(Deserialize)]
 pub struct Tags {
+    count: usize,
     #[serde(rename(deserialize = "next"))]
     next_page: Option<String>,
     #[serde(rename(deserialize = "previous"))]
@@ -29,9 +30,14 @@ pub struct Tags {
 
 #[derive(Debug)]
 pub enum Error {
+    /// repo string contains an illegal character
     InvalidCharacter(char),
+    /// couldn't fetch json with reqwest
     Fetching(String),
+    /// a serde error
     Converting(String),
+    /// invalid repos show a valid json with 0 tags
+    NoTagsFound,
     NoPrevPage,
     NoNextPage,
 }
@@ -44,6 +50,7 @@ impl fmt::Display for Error {
             Error::Converting(s) => write!(f, "Converting error: {}", s),
             Error::NoNextPage => write!(f, "No next page available"),
             Error::NoPrevPage => write!(f, "No previous page available"),
+            Error::NoTagsFound => write!(f, "Given Repo has 0 tags. Is it valid?"),
         }
     }
 }
@@ -68,6 +75,10 @@ impl Tags {
             Ok(result) => result,
             Err(e) => return Err(Error::Converting(format!("invalid json: {}", e))),
         };
+
+        if tags.count == 0 {
+            return Err(Error::NoTagsFound);
+        }
 
         Ok(tags)
     }
