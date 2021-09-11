@@ -1,3 +1,5 @@
+mod common;
+mod repo;
 mod tags;
 mod ui;
 mod widget;
