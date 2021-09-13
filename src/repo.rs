@@ -1,3 +1,7 @@
+use std::fmt;
+
+use regex::Regex;
+
 use crate::common;
 
 #[derive(Debug, PartialEq)]
@@ -7,6 +11,18 @@ pub enum Error {
     NoTagFound,
     InvalidChar,
     MisformedInput,
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Error::Conversion => write!(f, "Conversion error"),
+            Error::Empty => write!(f, "Input is empty"),
+            Error::NoTagFound => write!(f, "Expected a tag"),
+            Error::InvalidChar => write!(f, "Invalid character found"),
+            Error::MisformedInput => write!(f, "Unexpected input"),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -19,7 +35,7 @@ pub enum Repo {
 /// check if yaml line matches and returns the split of repo string and rest
 pub fn match_yaml_image(input: &str) -> Option<(&str, &str)> {
     lazy_static::lazy_static! {
-        static ref REGEX: regex::Regex = regex::Regex::new(r"^( +image *: *)([a-z0-9\./:]+)").unwrap();
+        static ref REGEX: Regex = Regex::new(r"^( +image *: *)([a-z0-9\./:]+)").unwrap();
     }
     let caps = match REGEX.captures(input) {
         Some(caps) => caps,
@@ -27,6 +43,28 @@ pub fn match_yaml_image(input: &str) -> Option<(&str, &str)> {
     };
 
     Some((caps.get(1).unwrap().as_str(), caps.get(2).unwrap().as_str()))
+}
+
+pub fn split_tag_from_repo(input: &str) -> Result<(&str, &str), Error> {
+    lazy_static::lazy_static! {
+        static ref REGEX: Regex = Regex::new(r"^([a-z0-9\./[^:]]*):?([a-z0-9._\-]*)").unwrap();
+    }
+    let (front, back) = match REGEX.captures(input) {
+        None => return Err(Error::MisformedInput),
+        Some(caps) => {
+            let front = match caps.get(1) {
+                None => return Err(Error::MisformedInput),
+                Some(cap) => cap.as_str(),
+            };
+            let back = match caps.get(2) {
+                None => "",
+                Some(cap) => cap.as_str(),
+            };
+            (front, back)
+        }
+    };
+
+    Ok((front, back))
 }
 
 pub fn split_repo(repo: &str) -> Result<Repo, Error> {
@@ -37,8 +75,8 @@ pub fn split_repo(repo: &str) -> Result<Repo, Error> {
     Ok(Repo::Project("".into()))
 }
 
-pub fn split_repo_without_tag(mut repo: &str) -> Result<Repo, Error> {
-    repo.trim();
+pub fn split_repo_without_tag(repo: &str) -> Result<Repo, Error> {
+    let repo = repo.trim();
     let split_repo: Vec<&str> = repo.split("/").collect();
     match split_repo.len() {
         1 => {
@@ -78,8 +116,6 @@ pub fn split_tag(repo: &str) -> Result<(&str, &str), Error> {
         Err(Error::NoTagFound)
     }
 }
-
-// fn
 
 pub fn extract(repo: &str) -> Result<(Option<&str>, Option<&str>, &str), Error> {
     if repo.len() == 0 {
@@ -171,5 +207,19 @@ mod tests {
             test_fn("   image: nginx #comment"),
             Some(("   image: ", "nginx"))
         );
+    }
+
+    #[test]
+    fn test_split_tag_from_repo() {
+        use crate::repo::split_tag_from_repo as test_fn;
+        assert_eq!(test_fn("nginx"), Ok(("nginx", "")));
+        assert_eq!(test_fn("library/nginx"), Ok(("library/nginx", "")));
+        assert_eq!(
+            test_fn("ghcr.io/library/nginx"),
+            Ok(("ghcr.io/library/nginx", ""))
+        );
+        assert_eq!(test_fn("nginx:"), Ok(("nginx", "")));
+        assert_eq!(test_fn("nginx:1"), Ok(("nginx", "1")));
+        assert_eq!(test_fn("nginx:latest"), Ok(("nginx", "latest")));
     }
 }

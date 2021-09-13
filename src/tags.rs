@@ -1,5 +1,6 @@
 use std::fmt;
 
+use crate::repo;
 use chrono::DateTime;
 use serde::Deserialize;
 
@@ -28,7 +29,7 @@ pub struct Tags {
     pub results: Vec<Images>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Error {
     /// repo string contains an illegal character
     InvalidCharacter(char),
@@ -84,18 +85,17 @@ impl Tags {
     }
 
     /// checks the repo name and may add a prefix for official images
-    pub fn check_repo(mut name: String) -> Result<String, Error> {
-        //check for right set of characters
-        if name.bytes().any(|c| !c.is_ascii()) {
-            return Err(Error::InvalidCharacter('a'));
-        }
+    pub fn check_repo(name: &str) -> Result<String, Error> {
+        let repo = match repo::split_tag_from_repo(name) {
+            Err(e) => return Err(Error::Converting(format!("{}", e))),
+            Ok((name, _)) => name,
+        };
 
-        //check if need to inject "library" of given repo
-        let regex = regex::Regex::new(r".*/.*").unwrap();
-        if !regex.is_match(&name) {
-            name.insert_str(0, "library/");
+        match repo::split_repo_without_tag(name) {
+            Ok(repo::Repo::Project(s)) => Ok(format!("library/{}", s)),
+            Ok(_) => Ok(repo.to_string()),
+            Err(e) => Err(Error::Converting(format!("{}", e))),
         }
-        Ok(name)
     }
 
     /// returns tags of next page
@@ -149,26 +149,14 @@ fn format_time_nice(time: chrono::Duration) -> String {
 
 #[cfg(test)]
 mod tests {
-    use crate::tags;
+    use crate::tags::{Error, Tags};
     #[test]
     fn test_check_repo() {
-        let check_eq = |s, s2| {
-            assert_eq!(&tags::Tags::check_repo(String::from(s)).unwrap(), s2);
-        };
-        let check_neq = |s, s2| {
-            assert_ne!(&tags::Tags::check_repo(String::from(s)).unwrap(), s2);
-        };
-        let check_err = |s: &str| {
-            assert_eq!(tags::Tags::check_repo(String::from(s)).is_err(), true);
-        };
-
-        check_eq("nginx", "library/nginx");
-        check_neq("nginx", "nginx");
-        check_eq("rocketchat/rocket.chat", "rocketchat/rocket.chat");
-        check_eq("mysql", "library/mysql");
-        check_neq("mysql", "mysql");
-        check_err("nginxä");
-        check_err("nginx²");
-        check_eq("selim13/automysqlbackup", "selim13/automysqlbackup");
+        assert_eq!(Tags::check_repo("nginx").unwrap(), "library/nginx");
+        assert_eq!(Tags::check_repo("library/nginx").unwrap(), "library/nginx");
+        assert_eq!(
+            Tags::check_repo("rocketchat/rocket.chat").unwrap(),
+            "rocketchat/rocket.chat"
+        );
     }
 }

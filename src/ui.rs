@@ -151,14 +151,14 @@ impl Ui {
                         match ui.services.extract_repo() {
                             Err(e) => ui.info.set_info(&format!("{}", e)),
                             Ok(s) => {
-                                let repo = match crate::tags::Tags::check_repo(s) {
+                                let repo = match crate::tags::Tags::check_repo(&s) {
                                     Err(e) => {
                                         ui.info.set_info(&format!("{}", e));
                                         continue;
                                     }
                                     Ok(s) => s,
                                 };
-                                ui.repo.set(repo);
+                                ui.repo.set(repo.to_string());
                                 ui.tags = tag_list::TagList::with_repo(ui.repo.get());
                             }
                         }
@@ -171,14 +171,14 @@ impl Ui {
                         match ui.services.extract_repo() {
                             Err(e) => ui.info.set_info(&format!("{}", e)),
                             Ok(s) => {
-                                let repo = match crate::tags::Tags::check_repo(s) {
+                                let repo = match crate::tags::Tags::check_repo(&s) {
                                     Err(e) => {
                                         ui.info.set_info(&format!("{}", e));
                                         continue;
                                     }
                                     Ok(s) => s,
                                 };
-                                ui.repo.set(repo);
+                                ui.repo.set(repo.to_string());
                                 ui.tags = tag_list::TagList::with_repo(ui.repo.get());
                             }
                         }
