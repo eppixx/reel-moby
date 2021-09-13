@@ -16,9 +16,18 @@ pub enum Repo {
     Project(String),
 }
 
-// pub fn extract_yaml(repo: &str) -> (String, String, String, String) {
-//     let regex = regex::Regex::new(r"( *image *:) *([^/])??/([^/:]):?(.*)?");
-// }
+/// check if yaml line matches and returns the split of repo string and rest
+pub fn match_yaml_image(input: &str) -> Option<(&str, &str)> {
+    lazy_static::lazy_static! {
+        static ref REGEX: regex::Regex = regex::Regex::new(r"^( +image *: *)([a-z0-9\./:]+)").unwrap();
+    }
+    let caps = match REGEX.captures(input) {
+        Some(caps) => caps,
+        None => return None,
+    };
+
+    Some((caps.get(1).unwrap().as_str(), caps.get(2).unwrap().as_str()))
+}
 
 pub fn split_repo(repo: &str) -> Result<Repo, Error> {
     let split_tag: Vec<&str> = repo.split(":").collect();
@@ -138,6 +147,29 @@ mod tests {
                 "library".into(),
                 "nginx".into(),
             ))
+        );
+    }
+
+    #[test]
+    fn test_match_yaml_image() {
+        use crate::repo::match_yaml_image as test_fn;
+        assert_eq!(test_fn(""), None);
+        assert_eq!(test_fn("version: '2'"), None);
+        assert_eq!(test_fn("image: "), None);
+        assert_eq!(test_fn("  image: "), None);
+        assert_eq!(test_fn("  image: nginx"), Some(("  image: ", "nginx")));
+        assert_eq!(
+            test_fn("  image: library/nginx"),
+            Some(("  image: ", "library/nginx"))
+        );
+        assert_eq!(
+            test_fn("  image: ghcr.io/library/nginx"),
+            Some(("  image: ", "ghcr.io/library/nginx"))
+        );
+        assert_eq!(test_fn("#   image: nginx"), None);
+        assert_eq!(
+            test_fn("   image: nginx #comment"),
+            Some(("   image: ", "nginx"))
         );
     }
 }

@@ -4,10 +4,10 @@ use std::io::BufRead;
 use std::io::BufReader;
 use std::io::Write;
 
-use regex::Regex;
 use tui::style::{Color, Style};
 use tui::widgets::{Block, Borders, List, ListState};
 
+use crate::repo;
 use crate::ui::State;
 
 #[derive(Debug)]
@@ -28,7 +28,6 @@ impl fmt::Display for Error {
 pub struct ServiceSwitcher {
     list: Vec<String>,
     state: ListState,
-    regex: Regex,
     changed: bool,
 }
 
@@ -47,7 +46,6 @@ impl ServiceSwitcher {
         Self {
             list,
             state: ListState::default(),
-            regex: Regex::new(r"( *image *): *([^:]*):?([^:]?) *").unwrap(),
             changed: false,
         }
     }
@@ -103,7 +101,7 @@ impl ServiceSwitcher {
             }
 
             //check if line matches
-            if self.regex.is_match(&self.list[i]) {
+            if repo::match_yaml_image(&self.list[i]).is_some() {
                 self.state.select(Some(i));
                 return true;
             }
@@ -135,7 +133,7 @@ impl ServiceSwitcher {
             }
 
             //check if line matches
-            if self.regex.is_match(&self.list[i]) {
+            if repo::match_yaml_image(&self.list[i]).is_some() {
                 self.state.select(Some(i));
                 return true;
             }
@@ -152,14 +150,10 @@ impl ServiceSwitcher {
     pub fn extract_repo(&self) -> Result<String, Error> {
         match self.state.selected() {
             None => return Err(Error::NoneSelected),
-            Some(i) => {
-                let caps = match self.regex.captures(&self.list[i]) {
-                    None => return Err(Error::Parsing(String::from("Nothing found"))),
-                    Some(cap) => cap,
-                };
-                let result: String = caps.get(2).unwrap().as_str().to_string();
-                return Ok(result);
-            }
+            Some(i) => match repo::match_yaml_image(&self.list[i]) {
+                None => return Err(Error::Parsing(String::from("Nothing found"))),
+                Some((_, repo)) => return Ok(repo.to_string()),
+            },
         }
     }
 
@@ -167,16 +161,10 @@ impl ServiceSwitcher {
     pub fn change_current_line(&mut self, repo_with_tag: String) {
         match self.state.selected() {
             None => (),
-            Some(i) => {
-                let caps = match self.regex.captures(&self.list[i]) {
-                    None => return,
-                    Some(cap) => cap,
-                };
-                let mut line = caps.get(1).unwrap().as_str().to_string();
-                line.push_str(": ");
-                line.push_str(&repo_with_tag);
-                self.list[i] = line;
-            }
+            Some(i) => match repo::match_yaml_image(&self.list[i]) {
+                None => return,
+                Some((front, _)) => self.list[i] = format!("{}{}", front, repo_with_tag),
+            },
         }
         self.changed = true;
     }
