@@ -63,7 +63,7 @@ impl TagList {
         match &self.typ {
             Type::Status(_) => (),
             Type::Repo(tags) => match tags.next_page() {
-                Err(e) => return Err(Error::NoNextPage),
+                Err(_) => return Err(Error::NoNextPage),
                 Ok(tags) => self.typ = Type::Repo(tags),
             },
         }
@@ -75,7 +75,7 @@ impl TagList {
         match &self.typ {
             Type::Status(_) => (),
             Type::Repo(tags) => match tags.prev_page() {
-                Err(e) => return Err(Error::NoPrevPage),
+                Err(_) => return Err(Error::NoPrevPage),
                 Ok(tags) => self.typ = Type::Repo(tags),
             },
         }
