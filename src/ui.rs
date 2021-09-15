@@ -13,11 +13,11 @@ use crate::widget::repo_entry;
 use crate::widget::service_switcher;
 use crate::widget::tag_list;
 
-pub struct Ui {
+pub struct Ui<'a> {
     state: State,
     repo: crate::widget::repo_entry::RepoEntry,
     tags: crate::widget::tag_list::TagList,
-    services: crate::widget::service_switcher::ServiceSwitcher,
+    services: crate::widget::service_switcher::ServiceSwitcher<'a>,
     info: crate::widget::info::Info,
 }
 
@@ -41,7 +41,7 @@ impl std::iter::Iterator for State {
     }
 }
 
-impl Ui {
+impl Ui<'_> {
     pub fn run(repo_id: &str) {
         let mut ui = Ui {
             state: State::SelectService,

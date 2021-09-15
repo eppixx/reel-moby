@@ -25,28 +25,42 @@ impl fmt::Display for Error {
     }
 }
 
-pub struct ServiceSwitcher {
+pub struct ServiceSwitcher<'a> {
     list: Vec<String>,
     state: ListState,
     changed: bool,
+    opened_file: &'a str,
 }
 
-impl ServiceSwitcher {
+impl ServiceSwitcher<'_> {
     pub fn new() -> Self {
-        let list = match File::open("docker-compose.yml") {
-            Err(e) => vec![format!("No docker-compose.yml found: {}", e)],
-            Ok(file) => {
-                let buf = BufReader::new(file);
-                buf.lines()
-                    .map(|l| l.expect("Could not parse line"))
-                    .collect()
-            }
-        };
+        let file_list = vec!["docker-compose.yml", "docker-compose.yaml"];
 
+        for file in file_list {
+            let list = match File::open(file) {
+                Err(_) => continue,
+                Ok(file) => {
+                    let buf = BufReader::new(file);
+                    buf.lines()
+                        .map(|l| l.expect("Could not parse line"))
+                        .collect()
+                }
+            };
+
+            return Self {
+                list,
+                state: ListState::default(),
+                changed: false,
+                opened_file: file,
+            };
+        }
+
+        //could not find docker-compose file
         Self {
-            list,
+            list: vec![format!("No docker-compose file found")],
             state: ListState::default(),
             changed: false,
+            opened_file: "No file",
         }
     }
 
@@ -58,8 +72,8 @@ impl ServiceSwitcher {
         };
 
         let title = match &self.changed {
-            true => "File: *docker-compose.yml*",
-            false => "File: docker-compose.yml",
+            true => format!("File: *{}*", self.opened_file),
+            false => format!("File: {}", self.opened_file),
         };
 
         let items: Vec<tui::widgets::ListItem> = self
@@ -171,8 +185,7 @@ impl ServiceSwitcher {
 
     /// save the currently opened file
     pub fn save(&mut self) -> Result<(), std::io::Error> {
-        let name = "docker-compose.yml";
-        let mut file = File::create(name)?;
+        let mut file = File::create(self.opened_file)?;
         for line in &self.list {
             file.write_all(line.as_bytes())?;
             file.write_all("\n".as_bytes())?;
