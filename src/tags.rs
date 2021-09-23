@@ -3,11 +3,17 @@ use std::fmt;
 use chrono::DateTime;
 use serde::Deserialize;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct ImageDetails {
     architecture: String,
-    os: String,
+    // os: String,
     size: usize,
+}
+
+impl fmt::Display for ImageDetails {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "[{}, {}MB]", self.architecture, self.size / 1024 / 1024)
+    }
 }
 
 #[derive(Deserialize)]
@@ -117,10 +123,22 @@ impl Tags {
 
 impl fmt::Display for Images {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        //architecture infos
+        let mut arch = String::new();
+        for image in &self.images {
+            arch.push_str(&format!("{}", image));
+        }
+
         let now = chrono::Utc::now();
         let rfc3339 = DateTime::parse_from_rfc3339(&self.last_updated).unwrap();
         let dif = now - rfc3339.with_timezone(&chrono::Utc);
-        write!(f, "{} vor {}", self.tag_name, format_time_nice(dif))
+        write!(
+            f,
+            "{} vor {} {}",
+            self.tag_name,
+            format_time_nice(dif),
+            arch
+        )
     }
 }
 
