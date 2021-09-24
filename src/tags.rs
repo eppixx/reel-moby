@@ -37,8 +37,6 @@ pub struct Tags {
 
 #[derive(Debug, PartialEq)]
 pub enum Error {
-    /// repo string contains an illegal character
-    InvalidCharacter(char),
     /// couldn't fetch json with reqwest
     Fetching(String),
     /// a serde error
@@ -52,7 +50,6 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Error::InvalidCharacter(c) => write!(f, "Invalid Character: {}", c),
             Error::Fetching(s) => write!(f, "Fetching error: {}", s),
             Error::Converting(s) => write!(f, "Converting error: {}", s),
             Error::NoNextPage => write!(f, "No next page available"),

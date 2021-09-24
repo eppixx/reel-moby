@@ -115,7 +115,7 @@ impl ServiceSwitcher<'_> {
             }
 
             //check if line matches
-            if repo::match_yaml_image(&self.list[i]).is_some() {
+            if repo::match_yaml_image(&self.list[i]).is_ok() {
                 self.state.select(Some(i));
                 return true;
             }
@@ -147,7 +147,7 @@ impl ServiceSwitcher<'_> {
             }
 
             //check if line matches
-            if repo::match_yaml_image(&self.list[i]).is_some() {
+            if repo::match_yaml_image(&self.list[i]).is_ok() {
                 self.state.select(Some(i));
                 return true;
             }
@@ -165,8 +165,8 @@ impl ServiceSwitcher<'_> {
         match self.state.selected() {
             None => return Err(Error::NoneSelected),
             Some(i) => match repo::match_yaml_image(&self.list[i]) {
-                None => return Err(Error::Parsing(String::from("Nothing found"))),
-                Some((_, repo)) => return Ok(repo.to_string()),
+                Err(_) => return Err(Error::Parsing(String::from("Nothing found"))),
+                Ok((_, repo)) => return Ok(repo.to_string()),
             },
         }
     }
@@ -176,8 +176,8 @@ impl ServiceSwitcher<'_> {
         match self.state.selected() {
             None => (),
             Some(i) => match repo::match_yaml_image(&self.list[i]) {
-                None => return,
-                Some((front, _)) => self.list[i] = format!("{}{}", front, repo_with_tag),
+                Err(_) => return,
+                Ok((front, _)) => self.list[i] = format!("{}{}", front, repo_with_tag),
             },
         }
         self.changed = true;
