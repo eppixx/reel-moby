@@ -13,7 +13,7 @@ struct ImageDetails {
 
 impl fmt::Display for ImageDetails {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "[{}, {}MB]", self.architecture, self.size / 1024 / 1024)
+        write!(f, "{}|{}MB", self.architecture, self.size / 1024 / 1024)
     }
 }
 
@@ -122,8 +122,11 @@ impl fmt::Display for Images {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         //architecture infos
         let mut arch = String::new();
-        for image in &self.images {
+        for image in self.images.iter().take(1) {
             arch.push_str(&format!("{}", image));
+        }
+        for image in self.images.iter().skip(1) {
+            arch.push_str(&format!(", {}", image));
         }
 
         let now = chrono::Utc::now();
@@ -131,7 +134,7 @@ impl fmt::Display for Images {
         let dif = now - rfc3339.with_timezone(&chrono::Utc);
         write!(
             f,
-            "{} vor {} {}",
+            "{} vor {} [{}]",
             self.tag_name,
             format_time_nice(dif),
             arch
