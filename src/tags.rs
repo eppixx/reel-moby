@@ -167,7 +167,7 @@ fn format_time_nice(time: chrono::Duration) -> String {
 
 #[cfg(test)]
 mod tests {
-    use crate::tags::{Error, Tags};
+    use crate::tags::Tags;
     #[test]
     fn test_check_repo() {
         assert_eq!(Tags::check_repo("nginx").unwrap(), "library/nginx");

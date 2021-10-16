@@ -102,7 +102,6 @@ pub fn split_repo_without_tag(repo: &str) -> Result<Repo, Error> {
 
 #[cfg(test)]
 mod tests {
-    use crate::repo;
     use crate::repo::{Error, Repo};
 
     #[test]
@@ -128,23 +127,23 @@ mod tests {
     #[test]
     fn test_match_yaml_image() {
         use crate::repo::match_yaml_image as test_fn;
-        assert_eq!(test_fn(""), None);
-        assert_eq!(test_fn("version: '2'"), None);
-        assert_eq!(test_fn("image: "), None);
-        assert_eq!(test_fn("  image: "), None);
-        assert_eq!(test_fn("  image: nginx"), Some(("  image: ", "nginx")));
+        assert_eq!(test_fn(""), Err(Error::NoTagFound));
+        assert_eq!(test_fn("version: '2'"), Err(Error::NoTagFound));
+        assert_eq!(test_fn("image: "), Err(Error::NoTagFound));
+        assert_eq!(test_fn("  image: "), Err(Error::NoTagFound));
+        assert_eq!(test_fn("  image: nginx"), Ok(("  image: ", "nginx")));
         assert_eq!(
             test_fn("  image: library/nginx"),
-            Some(("  image: ", "library/nginx"))
+            Ok(("  image: ", "library/nginx"))
         );
         assert_eq!(
             test_fn("  image: ghcr.io/library/nginx"),
-            Some(("  image: ", "ghcr.io/library/nginx"))
+            Ok(("  image: ", "ghcr.io/library/nginx"))
         );
-        assert_eq!(test_fn("#   image: nginx"), None);
+        assert_eq!(test_fn("#   image: nginx"), Err(Error::NoTagFound));
         assert_eq!(
             test_fn("   image: nginx #comment"),
-            Some(("   image: ", "nginx"))
+            Ok(("   image: ", "nginx"))
         );
     }
 
