@@ -12,6 +12,7 @@ use crate::widget::info;
 use crate::widget::repo_entry;
 use crate::widget::service_switcher;
 use crate::widget::tag_list;
+use crate::Opt;
 
 pub struct Ui<'a> {
     state: State,
@@ -42,7 +43,15 @@ impl std::iter::Iterator for State {
 }
 
 impl Ui<'_> {
-    pub fn run(repo_id: &str) {
+    pub fn run(opt: &Opt) {
+        let (repo_id, load_repo) = match &opt.repo {
+            None => (
+                "enter a repository or select one from docker-compose.yml",
+                false,
+            ),
+            Some(repo) => (String::as_str(repo), true),
+        };
+
         let mut ui = Ui {
             state: State::SelectService,
             repo: repo_entry::RepoEntry::new(repo_id),
@@ -50,6 +59,10 @@ impl Ui<'_> {
             services: service_switcher::ServiceSwitcher::new(),
             info: info::Info::new("Select image of edit Repository"),
         };
+
+        if load_repo {
+            ui.tags = tag_list::TagList::with_repo(ui.repo.get());
+        }
 
         //setup tui
         let stdout = io::stdout().into_raw_mode().unwrap();
