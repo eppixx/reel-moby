@@ -14,11 +14,11 @@ use crate::widget::service_switcher;
 use crate::widget::tag_list;
 use crate::Opt;
 
-pub struct Ui<'a> {
+pub struct Ui {
     state: State,
     repo: crate::widget::repo_entry::RepoEntry,
     tags: crate::widget::tag_list::TagList,
-    services: crate::widget::service_switcher::ServiceSwitcher<'a>,
+    services: crate::widget::service_switcher::ServiceSwitcher,
     info: crate::widget::info::Info,
 }
 
@@ -42,7 +42,7 @@ impl std::iter::Iterator for State {
     }
 }
 
-impl Ui<'_> {
+impl Ui {
     pub fn run(opt: &Opt) {
         let (repo_id, load_repo) = match &opt.repo {
             None => (
@@ -56,7 +56,7 @@ impl Ui<'_> {
             state: State::SelectService,
             repo: repo_entry::RepoEntry::new(repo_id),
             tags: tag_list::TagList::with_status("Tags are empty"),
-            services: service_switcher::ServiceSwitcher::new(),
+            services: service_switcher::ServiceSwitcher::new(&opt.config),
             info: info::Info::new("Select image of edit Repository"),
         };
 

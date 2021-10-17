@@ -3,6 +3,7 @@ use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::io::Write;
+use std::path::PathBuf;
 
 use tui::style::{Color, Style};
 use tui::widgets::{Block, Borders, List, ListState};
@@ -25,19 +26,26 @@ impl fmt::Display for Error {
     }
 }
 
-pub struct ServiceSwitcher<'a> {
+pub struct ServiceSwitcher {
     list: Vec<String>,
     state: ListState,
     changed: bool,
-    opened_file: &'a str,
+    opened_file: PathBuf,
 }
 
-impl ServiceSwitcher<'_> {
-    pub fn new() -> Self {
-        let file_list = vec!["docker-compose.yml", "docker-compose.yaml"];
+impl ServiceSwitcher {
+    pub fn new(file: &Option<PathBuf>) -> Self {
+        let mut file_list = vec![
+            PathBuf::from("docker-compose.yml"),
+            PathBuf::from("docker-compose.yaml"),
+        ];
+        match &file {
+            None => (),
+            Some(file) => file_list.insert(0, file.clone()),
+        }
 
         for file in file_list {
-            let list = match File::open(file) {
+            let list = match File::open(&file) {
                 Err(_) => continue,
                 Ok(file) => {
                     let buf = BufReader::new(file);
@@ -60,7 +68,7 @@ impl ServiceSwitcher<'_> {
             list: vec![format!("No docker-compose file found")],
             state: ListState::default(),
             changed: false,
-            opened_file: "No file",
+            opened_file: PathBuf::new(),
         }
     }
 
@@ -72,8 +80,8 @@ impl ServiceSwitcher<'_> {
         };
 
         let title = match &self.changed {
-            true => format!("File: *{}*", self.opened_file),
-            false => format!("File: {}", self.opened_file),
+            true => format!("File: *{}*", &self.opened_file.display()),
+            false => format!("File: {}", &self.opened_file.display()),
         };
 
         let items: Vec<tui::widgets::ListItem> = self
@@ -185,7 +193,7 @@ impl ServiceSwitcher<'_> {
 
     /// save the currently opened file
     pub fn save(&mut self) -> Result<(), std::io::Error> {
-        let mut file = File::create(self.opened_file)?;
+        let mut file = File::create(&self.opened_file)?;
         for line in &self.list {
             file.write_all(line.as_bytes())?;
             file.write_all("\n".as_bytes())?;
