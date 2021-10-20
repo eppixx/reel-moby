@@ -52,7 +52,7 @@ impl NoYaml {
             state: State::EditRepo,
             repo,
             tags: tag_list::TagList::with_status("Tags are empty"),
-            info: info::Info::new("edit the Repository widget to load tags"),
+            info: info::Info::new("could not find a docker-compose file"),
         };
 
         // load tags if a repository was given thorugh paramter
