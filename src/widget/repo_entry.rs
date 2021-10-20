@@ -3,8 +3,6 @@ use tui::layout::Alignment;
 use tui::style::{Color, Style};
 use tui::widgets::{Block, Borders, Paragraph};
 
-use crate::ui::State;
-
 pub struct RepoEntry {
     text: String,
     old_text: String,

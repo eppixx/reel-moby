@@ -26,5 +26,5 @@ pub struct Opt {
 fn main() {
     //parse parameter
     let opt = Opt::from_args();
-    ui::Ui::run(&opt);
+    ui::create_ui(&opt);
 }

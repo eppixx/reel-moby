@@ -1,8 +1,7 @@
-use std::sync::mpsc;
 use std::{io, thread};
 
+use crate::Opt;
 use termion::event::Key;
-use termion::input::TermRead;
 use termion::raw::IntoRawMode;
 use tui::backend::TermionBackend;
 use tui::layout::{Constraint, Direction, Layout};
@@ -12,7 +11,6 @@ use crate::widget::info;
 use crate::widget::repo_entry;
 use crate::widget::service_switcher;
 use crate::widget::tag_list;
-use crate::Opt;
 
 pub struct Ui {
     state: State,
@@ -56,7 +54,7 @@ impl Ui {
             state: State::SelectService,
             repo: repo_entry::RepoEntry::new(repo_id),
             tags: tag_list::TagList::with_status("Tags are empty"),
-            services: service_switcher::ServiceSwitcher::new(&opt.config),
+            services: service_switcher::ServiceSwitcher::new(&opt.config).unwrap(),
             info: info::Info::new("Select image of edit Repository"),
         };
 
@@ -70,7 +68,7 @@ impl Ui {
         let mut terminal = Terminal::new(backend).unwrap();
 
         //setup input thread
-        let receiver = ui.spawn_stdin_channel();
+        let receiver = super::spawn_stdin_channel();
 
         //core interaction loop
         'core: loop {
@@ -211,19 +209,5 @@ impl Ui {
         }
 
         terminal.clear().unwrap();
-    }
-
-    /// create a thread for catching input and send them to core loop
-    pub fn spawn_stdin_channel(&self) -> mpsc::Receiver<termion::event::Key> {
-        let (tx, rx) = mpsc::channel::<termion::event::Key>();
-
-        thread::spawn(move || loop {
-            let stdin = io::stdin();
-            for c in stdin.keys() {
-                tx.send(c.unwrap()).unwrap();
-            }
-        });
-        thread::sleep(std::time::Duration::from_millis(64));
-        rx
     }
 }

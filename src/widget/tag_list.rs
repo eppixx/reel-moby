@@ -5,7 +5,6 @@ use tui::style::{Color, Style};
 use tui::widgets::{Block, Borders, List, ListState};
 
 use crate::tags;
-use crate::ui::State;
 
 #[derive(Debug)]
 pub enum Error {

@@ -9,7 +9,6 @@ use tui::style::{Color, Style};
 use tui::widgets::{Block, Borders, List, ListState};
 
 use crate::repo;
-use crate::ui::State;
 
 #[derive(Debug)]
 pub enum Error {
@@ -34,7 +33,7 @@ pub struct ServiceSwitcher {
 }
 
 impl ServiceSwitcher {
-    pub fn new(file: &Option<PathBuf>) -> Self {
+    pub fn new(file: &Option<PathBuf>) -> Option<Self> {
         let mut file_list = vec![
             PathBuf::from("docker-compose.yml"),
             PathBuf::from("docker-compose.yaml"),
@@ -55,21 +54,16 @@ impl ServiceSwitcher {
                 }
             };
 
-            return Self {
+            return Some(Self {
                 list,
                 state: ListState::default(),
                 changed: false,
                 opened_file: file,
-            };
+            });
         }
 
         //could not find docker-compose file
-        Self {
-            list: vec![format!("No docker-compose file found")],
-            state: ListState::default(),
-            changed: false,
-            opened_file: PathBuf::new(),
-        }
+        None
     }
 
     pub fn render(&mut self, colored: bool) -> (List, &mut ListState) {
