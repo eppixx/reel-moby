@@ -8,7 +8,6 @@ mod widget;
 
 /// helps you searching or updating tags of your used docker images
 #[derive(StructOpt, Debug)]
-#[structopt(name = "main")]
 pub struct Opt {
     /// Show architectures of images and their sizes
     #[structopt(short, long)]
