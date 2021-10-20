@@ -29,13 +29,13 @@ impl RepoEntry {
         self.old_text = entry;
     }
 
-    pub fn render(&self, state: &crate::ui::State) -> Paragraph {
+    pub fn render(&self, colored: bool) -> Paragraph {
         let title = match self.changed {
             true => "Repository*",
             false => "Repository",
         };
 
-        let border_style = if state == &crate::ui::State::EditRepo {
+        let border_style = if colored {
             Style::default().fg(Color::Green)
         } else {
             Style::default().fg(Color::Gray)
@@ -52,11 +52,7 @@ impl RepoEntry {
             .alignment(Alignment::Left)
     }
 
-    pub fn handle_input(&mut self, state: &State, key: termion::event::Key) {
-        if state != &State::EditRepo {
-            return;
-        }
-
+    pub fn handle_input(&mut self, key: termion::event::Key) {
         match key {
             // Key::Char('\n') => self.confirm(), //handled in Ui
             Key::Char(c) => {

@@ -72,8 +72,8 @@ impl ServiceSwitcher {
         }
     }
 
-    pub fn render(&mut self, state: &State) -> (List, &mut ListState) {
-        let border_style = if state == &State::SelectService {
+    pub fn render(&mut self, colored: bool) -> (List, &mut ListState) {
+        let border_style = if colored {
             Style::default().fg(Color::Green)
         } else {
             Style::default().fg(Color::Gray)

@@ -109,8 +109,8 @@ impl TagList {
         }
     }
 
-    pub fn render(&mut self, state: &State) -> (List, &mut ListState) {
-        let border_style = if state == &State::SelectTag {
+    pub fn render(&mut self, colored: bool) -> (List, &mut ListState) {
+        let border_style = if colored {
             Style::default().fg(Color::Green)
         } else {
             Style::default().fg(Color::Gray)
@@ -144,11 +144,7 @@ impl TagList {
         (items, &mut self.state)
     }
 
-    pub fn handle_input(&mut self, state: &State, key: termion::event::Key) {
-        if state != &State::SelectTag {
-            return;
-        }
-
+    pub fn handle_input(&mut self, key: termion::event::Key) {
         match key {
             Key::Down => self.next(),
             Key::Up => self.previous(),

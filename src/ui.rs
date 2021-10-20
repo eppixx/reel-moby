@@ -90,10 +90,10 @@ impl Ui {
                         )
                         .split(rect.size());
 
-                    let (list, state) = ui.services.render(&ui.state);
+                    let (list, state) = ui.services.render(ui.state == State::SelectService);
                     rect.render_stateful_widget(list, chunks[0], state);
-                    rect.render_widget(ui.repo.render(&ui.state), chunks[1]);
-                    let (list, state) = ui.tags.render(&ui.state);
+                    rect.render_widget(ui.repo.render(ui.state == State::EditRepo), chunks[1]);
+                    let (list, state) = ui.tags.render(ui.state == State::SelectTag);
                     rect.render_stateful_widget(list, chunks[2], state);
                     rect.render_widget(ui.info.render(), chunks[3]);
                 })
@@ -145,22 +145,24 @@ impl Ui {
                     }
                     _ => (),
                 },
-                Ok(Key::Char(key)) => {
-                    if ui.state == State::EditRepo {
+                Ok(Key::Char(key)) => match ui.state {
+                    State::SelectService => (),
+                    State::EditRepo => {
                         ui.info.set_info("Editing Repository");
+                        ui.repo.handle_input(Key::Char(key));
                     }
-                    ui.repo.handle_input(&ui.state, Key::Char(key));
-                    ui.tags.handle_input(&ui.state, Key::Char(key));
-                }
-                Ok(Key::Backspace) => {
-                    if ui.state == State::EditRepo {
+                    State::SelectTag => (),
+                },
+                Ok(Key::Backspace) => match ui.state {
+                    State::SelectService => (),
+                    State::EditRepo => {
                         ui.info.set_info("Editing Repository");
+                        ui.repo.handle_input(Key::Backspace);
                     }
-                    ui.repo.handle_input(&ui.state, Key::Backspace);
-                    ui.tags.handle_input(&ui.state, Key::Backspace);
-                }
-                Ok(Key::Up) => {
-                    if ui.state == State::SelectService && ui.services.find_previous_match() {
+                    State::SelectTag => (),
+                },
+                Ok(Key::Up) => match ui.state {
+                    State::SelectService if ui.services.find_previous_match() => {
                         match ui.services.extract_repo() {
                             Err(e) => ui.info.set_info(&format!("{}", e)),
                             Ok(s) => {
@@ -176,9 +178,10 @@ impl Ui {
                             }
                         }
                     }
-                    ui.tags.handle_input(&ui.state, Key::Up);
-                    ui.repo.handle_input(&ui.state, Key::Up);
-                }
+                    State::SelectService => (),
+                    State::EditRepo => (),
+                    State::SelectTag => ui.tags.handle_input(Key::Up),
+                },
                 Ok(Key::Down) => match ui.state {
                     State::SelectService if ui.services.find_next_match() => {
                         match ui.services.extract_repo() {
@@ -196,15 +199,10 @@ impl Ui {
                             }
                         }
                     }
-                    _ => {
-                        ui.tags.handle_input(&ui.state, Key::Down);
-                        ui.repo.handle_input(&ui.state, Key::Down);
-                    }
+                    State::SelectService => (),
+                    State::EditRepo => (),
+                    State::SelectTag => ui.tags.handle_input(Key::Down),
                 },
-                Ok(key) => {
-                    ui.repo.handle_input(&ui.state, Key::Down);
-                    ui.tags.handle_input(&ui.state, key);
-                }
                 _ => (),
             }
 
