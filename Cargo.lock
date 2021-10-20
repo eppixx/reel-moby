@@ -537,20 +537,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "query-docker-tags"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "lazy_static",
- "regex",
- "reqwest",
- "serde",
- "serde_json",
- "termion",
- "tui",
-]
-
-[[package]]
 name = "quote"
 version = "1.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -615,6 +601,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8440d8acb4fd3d277125b4bd01a6f38aee8d814b3b5fc09b3f2b825d37d3fe8f"
 dependencies = [
  "redox_syscall",
+]
+
+[[package]]
+name = "reel-moby"
+version = "0.9.0"
+dependencies = [
+ "chrono",
+ "lazy_static",
+ "regex",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "termion",
+ "tui",
 ]
 
 [[package]]
