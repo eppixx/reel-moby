@@ -44,7 +44,7 @@ impl Ui {
     pub fn run(opt: &Opt) {
         let (repo_id, load_repo) = match &opt.repo {
             None => (
-                "enter a repository or select one from docker-compose.yml",
+                "enter a repository here or select one from file widget",
                 false,
             ),
             Some(repo) => (String::as_str(repo), true),
@@ -59,7 +59,7 @@ impl Ui {
         };
 
         if load_repo {
-            ui.tags = tag_list::TagList::with_repo(ui.repo.get());
+            ui.tags = tag_list::TagList::with_repo_name(ui.repo.get());
         }
 
         //setup tui
@@ -113,20 +113,12 @@ impl Ui {
                 },
                 Ok(Key::Ctrl('r')) => {
                     ui.repo.confirm();
-                    ui.tags = tag_list::TagList::with_repo(ui.repo.get());
+                    ui.tags = tag_list::TagList::with_repo_name(ui.repo.get());
                 }
-                Ok(Key::Ctrl('n')) => match ui.tags.next_page() {
-                    Err(e) => ui.info.set_info(&format!("{}", e)),
-                    Ok(_) => (),
-                },
-                Ok(Key::Ctrl('p')) => match ui.tags.prev_page() {
-                    Err(e) => ui.info.set_info(&format!("{}", e)),
-                    Ok(_) => (),
-                },
                 Ok(Key::Char('\n')) => match ui.state {
                     State::EditRepo => {
                         ui.repo.confirm();
-                        ui.tags = tag_list::TagList::with_repo(ui.repo.get());
+                        ui.tags = tag_list::TagList::with_repo_name(ui.repo.get());
                     }
                     State::SelectTag => {
                         let mut repo = ui.repo.get();
@@ -172,7 +164,7 @@ impl Ui {
                                     Ok(s) => s,
                                 };
                                 ui.repo.set(repo.to_string());
-                                ui.tags = tag_list::TagList::with_repo(ui.repo.get());
+                                ui.tags = tag_list::TagList::with_repo_name(ui.repo.get());
                             }
                         }
                     }
@@ -193,7 +185,7 @@ impl Ui {
                                     Ok(s) => s,
                                 };
                                 ui.repo.set(repo.to_string());
-                                ui.tags = tag_list::TagList::with_repo(ui.repo.get());
+                                ui.tags = tag_list::TagList::with_repo_name(ui.repo.get());
                             }
                         }
                     }

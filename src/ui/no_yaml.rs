@@ -57,7 +57,7 @@ impl NoYaml {
 
         // load tags if a repository was given thorugh paramter
         if load_repo {
-            ui.tags = tag_list::TagList::with_repo(ui.repo.get());
+            ui.tags = tag_list::TagList::with_repo_name(ui.repo.get());
         }
 
         //setup tui
@@ -100,22 +100,17 @@ impl NoYaml {
                 }
                 Ok(Key::Ctrl('r')) => {
                     ui.repo.confirm();
-                    ui.tags = tag_list::TagList::with_repo(ui.repo.get());
+                    ui.tags = tag_list::TagList::with_repo_name(ui.repo.get());
                 }
-                Ok(Key::Ctrl('n')) => match ui.tags.next_page() {
-                    Err(e) => ui.info.set_info(&format!("{}", e)),
-                    Ok(_) => (),
-                },
-                Ok(Key::Ctrl('p')) => match ui.tags.prev_page() {
-                    Err(e) => ui.info.set_info(&format!("{}", e)),
-                    Ok(_) => (),
-                },
                 Ok(Key::Char('\n')) => match ui.state {
                     State::EditRepo => {
                         ui.repo.confirm();
-                        ui.tags = tag_list::TagList::with_repo(ui.repo.get());
+                        ui.tags = tag_list::TagList::with_repo_name(ui.repo.get());
                     }
-                    _ => (),
+                    State::SelectTag => {
+                        ui.tags.get_selected();
+                        ()
+                    }
                 },
                 Ok(Key::Char(key)) => match ui.state {
                     State::EditRepo => {
@@ -125,6 +120,21 @@ impl NoYaml {
                     State::SelectTag => {
                         ui.tags.handle_input(Key::Char(key));
                     }
+                },
+                Ok(Key::Backspace) => match ui.state {
+                    State::EditRepo => {
+                        ui.info.set_info("Editing Repository");
+                        ui.repo.handle_input(Key::Backspace);
+                    }
+                    State::SelectTag => (),
+                },
+                Ok(Key::Up) => match ui.state {
+                    State::EditRepo => (),
+                    State::SelectTag => ui.tags.handle_input(Key::Up),
+                },
+                Ok(Key::Down) => match ui.state {
+                    State::EditRepo => (),
+                    State::SelectTag => ui.tags.handle_input(Key::Down),
                 },
                 _ => (),
             }

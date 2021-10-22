@@ -4,7 +4,7 @@ use crate::repo;
 use chrono::DateTime;
 use serde::Deserialize;
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 struct ImageDetails {
     architecture: String,
     // os: String,
@@ -17,7 +17,7 @@ impl fmt::Display for ImageDetails {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct Images {
     images: Vec<ImageDetails>,
     #[serde(rename(deserialize = "name"))]
@@ -29,9 +29,7 @@ pub struct Images {
 pub struct Tags {
     count: usize,
     #[serde(rename(deserialize = "next"))]
-    next_page: Option<String>,
-    #[serde(rename(deserialize = "previous"))]
-    prev_page: Option<String>,
+    pub next_page: Option<String>,
     pub results: Vec<Images>,
 }
 
@@ -43,7 +41,6 @@ pub enum Error {
     Converting(String),
     /// invalid repos show a valid json with 0 tags
     NoTagsFound,
-    NoPrevPage,
     NoNextPage,
 }
 
@@ -53,7 +50,6 @@ impl fmt::Display for Error {
             Error::Fetching(s) => write!(f, "Fetching error: {}", s),
             Error::Converting(s) => write!(f, "Converting error: {}", s),
             Error::NoNextPage => write!(f, "No next page available"),
-            Error::NoPrevPage => write!(f, "No previous page available"),
             Error::NoTagsFound => write!(f, "Given Repo has 0 tags. Is it valid?"),
         }
     }
@@ -106,14 +102,6 @@ impl Tags {
         match &self.next_page {
             Some(url) => Self::with_url(url),
             None => Err(Error::NoNextPage),
-        }
-    }
-
-    /// returns tags of previous page
-    pub fn prev_page(&self) -> Result<Self, Error> {
-        match &self.prev_page {
-            Some(url) => Self::with_url(url),
-            None => Err(Error::NoPrevPage),
         }
     }
 }
