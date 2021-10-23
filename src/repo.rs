@@ -69,7 +69,7 @@ pub fn split_tag_from_repo(input: &str) -> Result<(&str, &str), Error> {
 
 pub fn split_repo_without_tag(repo: &str) -> Result<Repo, Error> {
     let repo = repo.trim();
-    let split_repo: Vec<&str> = repo.split("/").collect();
+    let split_repo: Vec<&str> = repo.split('/').collect();
     match split_repo.len() {
         1 => {
             let regex = regex::Regex::new(r"[a-z0-9]+").unwrap();

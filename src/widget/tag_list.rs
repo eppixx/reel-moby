@@ -163,7 +163,7 @@ impl TagList {
     /// select next tag
     fn next(&mut self) {
         match self.state.selected() {
-            None if self.lines.len() > 0 => self.state.select(Some(0)),
+            None if !self.lines.is_empty() => self.state.select(Some(0)),
             None => (),
             Some(i) if i == self.lines.len() - 1 => self.state.select(Some(0)),
             Some(i) => self.state.select(Some(i + 1)),
@@ -173,7 +173,7 @@ impl TagList {
     /// select previous tag
     fn previous(&mut self) {
         match self.state.selected() {
-            None if self.lines.len() > 0 => self.state.select(Some(self.lines.len())),
+            None if !self.lines.is_empty() => self.state.select(Some(self.lines.len())),
             None => (),
             Some(i) if i == 0 => self.state.select(Some(self.lines.len() - 1)),
             Some(i) => self.state.select(Some(i - 1)),

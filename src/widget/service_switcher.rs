@@ -104,10 +104,7 @@ impl ServiceSwitcher {
 
     /// finds the next image tag in given file
     pub fn find_next_match(&mut self) -> bool {
-        let current_line: usize = match self.state.selected() {
-            None => 0,
-            Some(i) => i,
-        };
+        let current_line: usize = self.state.selected().unwrap_or(0);
 
         let mut i = (current_line + 1) % self.list.len();
         loop {
@@ -131,10 +128,7 @@ impl ServiceSwitcher {
 
     /// finds the previous image tag in given file
     pub fn find_previous_match(&mut self) -> bool {
-        let current_line: usize = match self.state.selected() {
-            None => 0,
-            Some(i) => i,
-        };
+        let current_line: usize = self.state.selected().unwrap_or(0);
 
         let mut i: usize = if current_line == 0 {
             self.list.len() - 1
@@ -165,10 +159,10 @@ impl ServiceSwitcher {
     /// return the repository from currently selected row
     pub fn extract_repo(&self) -> Result<String, Error> {
         match self.state.selected() {
-            None => return Err(Error::NoneSelected),
+            None => Err(Error::NoneSelected),
             Some(i) => match repo::match_yaml_image(&self.list[i]) {
-                Err(_) => return Err(Error::Parsing(String::from("Nothing found"))),
-                Ok((_, repo)) => return Ok(repo.to_string()),
+                Err(_) => Err(Error::Parsing(String::from("Nothing found"))),
+                Ok((_, repo)) => Ok(repo.to_string()),
             },
         }
     }

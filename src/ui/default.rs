@@ -129,7 +129,7 @@ impl Ui {
                             }
                             Ok(tag) => tag,
                         };
-                        repo.push_str(":");
+                        repo.push(':');
                         repo.push_str(&tag);
                         ui.services.change_current_line(repo);
                     }
