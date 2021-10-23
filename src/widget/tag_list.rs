@@ -25,6 +25,7 @@ impl fmt::Display for Error {
 enum Line {
     Status(String),
     Image(tags::Images),
+    NextPage(String),
 }
 
 impl fmt::Display for Line {
@@ -32,6 +33,7 @@ impl fmt::Display for Line {
         match self {
             Line::Status(s) => write!(f, "{}", s),
             Line::Image(i) => write!(f, "{}", i),
+            Line::NextPage(s) => write!(f, "{}", s),
         }
     }
 }
@@ -68,7 +70,7 @@ impl TagList {
         match tags.next_page() {
             Err(_) => (),
             Ok(new_tags) => {
-                lines.push(Line::Status(String::from("load more tags")));
+                lines.push(Line::NextPage(String::from("load more tags")));
                 tags = new_tags;
             }
         };
@@ -115,24 +117,35 @@ impl TagList {
         match key {
             Key::Down => self.next(),
             Key::Up => self.previous(),
+            Key::Char('\n') => self.select(),
             _ => (),
+        }
+    }
+
+    /// loads new tags when matching line is selected
+    fn select(&mut self) {
+        if let Some(i) = self.state.selected() {
+            if let Line::NextPage(_) = &self.lines[i] {
+                self.load_next_page()
+            }
         }
     }
 
     pub fn get_selected(&mut self) -> Result<String, Error> {
         match self.state.selected() {
             None => Err(Error::NoneSelected),
-            Some(i) if i == self.lines.len() - 1 => {
-                self.load_next_page();
-                Err(Error::NextPageSelected)
-            }
             Some(i) => match &self.lines[i] {
                 Line::Status(_) => Err(Error::SelectedStatus),
                 Line::Image(i) => Ok(i.tag_name.clone()),
+                Line::NextPage(_) => {
+                    self.load_next_page();
+                    Err(Error::NextPageSelected)
+                }
             },
         }
     }
 
+    /// load new tags from the next page
     fn load_next_page(&mut self) {
         match &self.tags {
             Some(tags) => match tags.next_page() {

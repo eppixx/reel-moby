@@ -107,10 +107,7 @@ impl NoYaml {
                         ui.repo.confirm();
                         ui.tags = tag_list::TagList::with_repo_name(ui.repo.get());
                     }
-                    State::SelectTag => {
-                        ui.tags.get_selected();
-                        ()
-                    }
+                    State::SelectTag => ui.tags.handle_input(Key::Char('\n')),
                 },
                 Ok(Key::Char(key)) => match ui.state {
                     State::EditRepo => {

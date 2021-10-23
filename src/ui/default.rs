@@ -102,7 +102,6 @@ impl Ui {
                 Ok(Key::Ctrl('q')) => break 'core, //quit program without saving
                 Ok(Key::Char('\t')) => {
                     ui.state.next();
-                    ()
                 }
                 Ok(Key::Ctrl('s')) => match ui.services.save() {
                     Err(e) => {
