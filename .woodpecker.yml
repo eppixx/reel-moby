@@ -17,9 +17,9 @@ pipeline:
     # http://plugins.drone.io/appleboy/drone-discord/
     image: appleboy/drone-discord
     settings:
-      webhook_id: $DISCORD_ID
+      webhook_id: ddd
         # from_secret: $DISCORD_ID
-      webhook_token: $DISCORD_TOKEN
+      webhook_token: ddd
         # from_secret: $DISCORD_TOKEN
       message: >
         {{#success build.status}}
