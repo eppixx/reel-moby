@@ -6,12 +6,6 @@ pipeline:
       - cargo build --release
       - cargo test --release
 
-  echo-test:
-    image: docker
-    commands:
-      - echo $discord_id
-      - echo $DISCORD_ID
-
   echo-tes2:
     image: docker
     commands:
@@ -23,10 +17,10 @@ pipeline:
     # http://plugins.drone.io/appleboy/drone-discord/
     image: appleboy/drone-discord
     settings:
-      webhook_id:
-        from_secret: discord_id
-      webhook_token:
-        from_secret: discord_token
+      webhook_id: $DISCORD_ID
+        #from_secret: $${DISCORD_ID}}
+      webhook_token: $DISCORD_TOKEN
+        # from_secret: $${DISCORD_TOKEN}}
       message: >
         {{#success build.status}}
           build {{build.number}} succeeded. Good job.
