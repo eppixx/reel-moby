@@ -9,7 +9,7 @@ pipeline:
   echo-tes2:
     image: docker
     commands:
-      - echo $discord_id
+      - echo ${DISCORD_ID}
       - echo $DISCORD_ID
     secrets: [discord_id ]
 
@@ -27,4 +27,4 @@ pipeline:
         {{else}}
           build {{build.number}} failed. Fix me please.
         {{/success}}
-    secrets: [ discord_id, discord_token]
+      secrets: [ discord_id, discord_token]
