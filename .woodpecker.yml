@@ -6,6 +6,19 @@ pipeline:
       - cargo build --release
       - cargo test --release
 
+  echo-test:
+    image: docker
+    commands:
+      - echo $discord_id
+      - echo $DISCORD_ID
+
+  echo-tes2:
+    image: docker
+    commands:
+      - echo $discord_id
+      - echo $DISCORD_ID
+    secrets: [discord_id ]
+
   notify:
     # http://plugins.drone.io/appleboy/drone-discord/
     image: appleboy/drone-discord
@@ -20,3 +33,4 @@ pipeline:
         {{else}}
           build {{build.number}} failed. Fix me please.
         {{/success}}
+    secrets: [ discord_id, discord_token]
