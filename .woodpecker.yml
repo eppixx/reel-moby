@@ -9,15 +9,10 @@ pipeline:
   notify:
     # http://plugins.drone.io/appleboy/drone-discord/
     image: appleboy/drone-discord
-    commands:
-      - echo $DISCORD_ID
-      - echo $DISCORD_TOKEN
-      - echo $discord_id
-      - echo $discord_token
     settings:
-      webhook_id: $DISCORD_ID
+      webhook_id: $discord_id
         #from_secret: discord_id
-      webhook_token: $DISCORD_TOKEN
+      webhook_token: $discord_token
         #from_secret: discord_token
       message: >
         {{#success build.status}}
