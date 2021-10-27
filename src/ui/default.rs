@@ -122,6 +122,7 @@ impl Ui {
                     State::SelectTag => {
                         let mut repo = ui.repo.get();
                         let tag = match ui.tags.get_selected() {
+                            Err(tag_list::Error::NextPageSelected) => continue,
                             Err(e) => {
                                 ui.info.set_info(&format!("{}", e));
                                 continue;
