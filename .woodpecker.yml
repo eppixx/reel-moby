@@ -1,5 +1,23 @@
 # https://woodpecker-ci.org/docs/usage/intro
 pipeline:
+
+  notify:
+    # http://plugins.drone.io/appleboy/drone-discord/
+    image: appleboy/drone-discord
+    settings:
+    webhook_id: 901853296384438312
+      #  from_secret: discord_webhook_id
+    webhook_token: NFIwEVtLxgcaFIbeBHCRS7WuL2rPrQuzr6wsrraqLH_WUbfk-en6Xx_SkGsLm7JBt6O9
+    message: "test"
+      #  from_secret: discord_webhook_token
+      # message: >
+      #   {{#success build.status}}
+      #     build {{build.number}} succeeded. Good job.
+      #   {{else}}
+      #     build {{build.number}} failed. Fix me please.
+      #   {{/success}}
+      # secrets: [ discord_id, discord_token]
+
   build_and_test:
     image: rust
     commands:
@@ -13,18 +31,3 @@ pipeline:
       - echo $DISCORD_WEBHOOK_ID
     secrets: [discord_id ]
 
-  notify:
-    # http://plugins.drone.io/appleboy/drone-discord/
-    image: appleboy/drone-discord
-    settings:
-      webhook_id: 901853296384438312
-      #  from_secret: discord_webhook_id
-      webhook_token: NFIwEVtLxgcaFIbeBHCRS7WuL2rPrQuzr6wsrraqLH_WUbfk-en6Xx_SkGsLm7JBt6O9
-      #  from_secret: discord_webhook_token
-      # message: >
-      #   {{#success build.status}}
-      #     build {{build.number}} succeeded. Good job.
-      #   {{else}}
-      #     build {{build.number}} failed. Fix me please.
-      #   {{/success}}
-      # secrets: [ discord_id, discord_token]
