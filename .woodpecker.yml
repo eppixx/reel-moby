@@ -13,6 +13,7 @@ pipeline:
     files: target/release/reel-moby
     secrets: [api_key, base_url]
     when:
+      event: tag
       tag: test*
 
   notify:
@@ -22,3 +23,6 @@ pipeline:
     message: "build {{build.number}} failed. Fix me please."
     when:
       status: failure
+
+
+# http://plugins.drone.io/drone-plugins/drone-github-release/
