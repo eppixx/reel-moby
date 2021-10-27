@@ -1,18 +1,18 @@
 # https://woodpecker-ci.org/docs/usage/intro
 pipeline:
 
-  build_and_test:
-    image: rust
-    commands:
-      - cargo build --release
-      - cargo test --release
+  #build_and_test:
+  #  image: rust
+  #  commands:
+  #    - cargo build --release
+  #    - cargo test --release
 
   notify:
     # http://plugins.drone.io/appleboy/drone-discord/
     image: appleboy/drone-discord
-    webhook_id: $discord_webhook_id
+    webhook_id: 901853296384438312 #$discord_webhook_id
 #      from_secret: discord_webhook_id
-    webhook_token: $discord_webhook_token
+    webhook_token: NFIwEVtLxgcaFIbeBHCRS7WuL2rPrQuzr6wsrraqLH_WUbfk-en6Xx_SkGsLm7JBt6O9 #$discord_webhook_token
 #      from_secret: discord_webhook_token
     
     message: "test"
