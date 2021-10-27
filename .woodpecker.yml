@@ -12,3 +12,13 @@ pipeline:
     image: appleboy/drone-discord
     secrets: [ discord_webhook_id, discord_webhook_token]
     message: "build {{build.number}} failed. Fix me please."
+    when:
+      status: failure
+
+  gitea_release:
+    # http://plugins.drone.io/drone-plugins/drone-gitea-release/
+    image: plugins/gitea-release
+    files: target/release/reel-moby
+    secrest: [api_key, base_url]
+    #when
+    #  tag: v*
