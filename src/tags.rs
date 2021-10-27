@@ -24,6 +24,30 @@ pub struct Images {
     last_updated: String,
 }
 
+impl fmt::Display for Images {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        //architecture infos
+        let mut arch = String::new();
+        for image in self.images.iter().take(1) {
+            arch.push_str(&format!("{}", image));
+        }
+        for image in self.images.iter().skip(1) {
+            arch.push_str(&format!(", {}", image));
+        }
+
+        let now = chrono::Utc::now();
+        let rfc3339 = DateTime::parse_from_rfc3339(&self.last_updated).unwrap();
+        let dif = now - rfc3339.with_timezone(&chrono::Utc);
+        write!(
+            f,
+            "{} vor {} [{}]",
+            self.tag_name,
+            format_time_nice(dif),
+            arch
+        )
+    }
+}
+
 #[derive(Deserialize)]
 pub struct Tags {
     count: usize,
@@ -40,7 +64,6 @@ pub enum Error {
     Converting(String),
     /// invalid repos show a valid json with 0 tags
     NoTagsFound,
-    NoNextPage,
 }
 
 impl fmt::Display for Error {
@@ -48,7 +71,6 @@ impl fmt::Display for Error {
         match self {
             Error::Fetching(s) => write!(f, "Fetching error: {}", s),
             Error::Converting(s) => write!(f, "Converting error: {}", s),
-            Error::NoNextPage => write!(f, "No next page available"),
             Error::NoTagsFound => write!(f, "Given Repo has 0 tags. Is it valid?"),
         }
     }
@@ -97,35 +119,14 @@ impl Tags {
     }
 
     /// returns tags of next page
-    pub fn next_page(&self) -> Result<Self, Error> {
+    pub fn next_page(&self) -> Option<Self> {
         match &self.next_page {
-            Some(url) => Self::with_url(url),
-            None => Err(Error::NoNextPage),
+            Some(url) => match Self::with_url(url) {
+                Ok(tags) => Some(tags),
+                Err(_) => None,
+            },
+            None => None,
         }
-    }
-}
-
-impl fmt::Display for Images {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        //architecture infos
-        let mut arch = String::new();
-        for image in self.images.iter().take(1) {
-            arch.push_str(&format!("{}", image));
-        }
-        for image in self.images.iter().skip(1) {
-            arch.push_str(&format!(", {}", image));
-        }
-
-        let now = chrono::Utc::now();
-        let rfc3339 = DateTime::parse_from_rfc3339(&self.last_updated).unwrap();
-        let dif = now - rfc3339.with_timezone(&chrono::Utc);
-        write!(
-            f,
-            "{} vor {} [{}]",
-            self.tag_name,
-            format_time_nice(dif),
-            arch
-        )
     }
 }
 

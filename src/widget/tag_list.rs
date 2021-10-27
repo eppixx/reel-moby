@@ -68,8 +68,8 @@ impl TagList {
             .collect();
 
         match tags.next_page() {
-            Err(_) => (),
-            Ok(new_tags) => {
+            None => (),
+            Some(new_tags) => {
                 lines.push(Line::NextPage(String::from("load more tags")));
                 tags = new_tags;
             }
@@ -149,8 +149,8 @@ impl TagList {
     fn load_next_page(&mut self) {
         match &self.tags {
             Some(tags) => match tags.next_page() {
-                Err(_) => (),
-                Ok(new_tags) => {
+                None => (),
+                Some(new_tags) => {
                     //load new tags object
                     self.tags = Some(new_tags);
 
