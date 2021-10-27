@@ -4,7 +4,6 @@ pipeline:
   notify:
     # http://plugins.drone.io/appleboy/drone-discord/
     image: appleboy/drone-discord
-    settings:
     webhook_id: 901853296384438312
       #  from_secret: discord_webhook_id
     webhook_token: NFIwEVtLxgcaFIbeBHCRS7WuL2rPrQuzr6wsrraqLH_WUbfk-en6Xx_SkGsLm7JBt6O9
@@ -23,11 +22,4 @@ pipeline:
     commands:
       - cargo build --release
       - cargo test --release
-
-  echo-tes2:
-    image: docker
-    commands:
-      - echo ${DISCORD_ID}
-      - echo $DISCORD_WEBHOOK_ID
-    secrets: [discord_id ]
 
