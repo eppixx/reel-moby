@@ -11,7 +11,7 @@ pipeline:
     # http://plugins.drone.io/drone-plugins/drone-gitea-release/
     image: plugins/gitea-release
     files: target/release/reel-moby
-    secrest: [api_key, base_url]
+    secrets: [api_key, base_url]
     when:
       tag: test*
 
