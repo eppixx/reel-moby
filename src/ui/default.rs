@@ -54,7 +54,7 @@ impl Ui {
             state: State::SelectService,
             repo: repo_entry::RepoEntry::new(repo_id),
             tags: tag_list::TagList::with_status("Tags are empty"),
-            services: service_switcher::ServiceSwitcher::new(&opt.config).unwrap(),
+            services: service_switcher::ServiceSwitcher::new(&opt.file).unwrap(),
             info: info::Info::new("Select image of edit Repository"),
         };
 

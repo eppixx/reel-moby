@@ -10,7 +10,7 @@ use termion::input::TermRead;
 use crate::widget::service_switcher;
 
 pub fn create_ui(opt: &Opt) {
-    let service_result = service_switcher::ServiceSwitcher::new(&opt.config);
+    let service_result = service_switcher::ServiceSwitcher::new(&opt.file);
     match service_result {
         None => no_yaml::NoYaml::run(opt),
         Some(_) => default::Ui::run(opt),

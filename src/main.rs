@@ -15,7 +15,7 @@ pub struct Opt {
 
     /// A custom path to a docker-compose file
     #[structopt(short, long, parse(from_os_str))]
-    config: Option<PathBuf>,
+    file: Option<PathBuf>,
 
     /// Give a Repository identifier, e.g. library/nginx
     #[structopt(short, long, parse(from_str))]
