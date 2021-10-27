@@ -7,7 +7,6 @@ use serde::Deserialize;
 #[derive(Deserialize, Debug, Clone)]
 struct ImageDetails {
     architecture: String,
-    // os: String,
     size: usize,
 }
 

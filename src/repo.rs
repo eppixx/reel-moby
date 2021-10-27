@@ -2,24 +2,16 @@ use std::fmt;
 
 use regex::Regex;
 
-// use crate::common;
-
 #[derive(Debug, PartialEq)]
 pub enum Error {
-    // Conversion,
-    // Empty,
     NoTagFound,
-    // InvalidChar,
     MisformedInput,
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            // Error::Conversion => write!(f, "Conversion error"),
-            // Error::Empty => write!(f, "Input is empty"),
             Error::NoTagFound => write!(f, "Expected a tag"),
-            // Error::InvalidChar => write!(f, "Invalid character found"),
             Error::MisformedInput => write!(f, "Unexpected input"),
         }
     }
