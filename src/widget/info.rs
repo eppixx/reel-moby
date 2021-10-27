@@ -11,7 +11,7 @@ impl Info {
         Self {
             info: String::from(info),
             keys: String::from(
-                "Tab Cycle widgets   C-s Save   C-r Reload   C-q Quit   ↑ ↓ Select tags or image line",
+                "Tab Cycle widgets   C-s Save   C-r Reload   C-q Quit   ↑ ↓ Select tags or image line   Return Select current selection",
             ),
         }
     }
