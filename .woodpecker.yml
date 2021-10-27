@@ -12,7 +12,7 @@ pipeline:
     image: plugins/gitea-release
     files: target/release/reel-moby
     secrest: [api_key, base_url]
-    when
+    when:
       tag: test*
 
   notify:
