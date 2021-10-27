@@ -11,10 +11,4 @@ pipeline:
     # http://plugins.drone.io/appleboy/drone-discord/
     image: appleboy/drone-discord
     secrets: [ discord_webhook_id, discord_webhook_token]
-    #message: "test"
-    message: >
-      {{#success build.status}}
-        build {{build.number}} succeeded. Good job.
-      {{else}}
-        build {{build.number}} failed. Fix me please.
-      {{/success}}
+    message: "build {{build.number}} failed. Fix me please."
