@@ -14,7 +14,7 @@ pipeline:
     secrets: [gitea_release_api_key, gitea_release_base_url]
     when:
       event: tag
-      tag: test*
+      tag: v*
 
   notify:
     # http://plugins.drone.io/appleboy/drone-discord/
