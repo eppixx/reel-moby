@@ -1,0 +1,37 @@
+# https://woodpecker-ci.org/docs/usage/intro
+pipeline:
+
+  build_and_test:
+    image: rust
+    commands:
+      - cargo test
+      - cargo build --release
+
+  gitea_on_release:
+    # http://plugins.drone.io/drone-plugins/drone-gitea-release/
+    image: plugins/gitea-release
+    files: target/release/reel-moby
+    secrets: [gitea_release_api_key, gitea_release_base_url]
+    when:
+      event: tag
+      tag: v*
+
+  github_on_release:
+    # http://plugins.drone.io/drone-plugins/drone-github-release/
+    image: plugins/github-release
+    files: target/release/reel-moby
+    secrets: [github_release_api_key]
+    when:
+      event: tag
+      tag: v*
+
+  notify_when_failure:
+    # http://plugins.drone.io/appleboy/drone-discord/
+    image: appleboy/drone-discord
+    secrets: [ discord_webhook_id, discord_webhook_token]
+    message: "build {{build.number}} or release failed. Fix me please."
+    when:
+      status: failure
+
+
+# http://plugins.drone.io/drone-plugins/drone-github-release/
