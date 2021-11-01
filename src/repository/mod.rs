@@ -1,4 +1,5 @@
 mod dockerhub;
+mod ghcr;
 
 use std::fmt;
 
@@ -99,13 +100,13 @@ impl Repo {
         };
 
         //TODO change according to registry
-        // if &registry == "ghcr.io" {
-        //     //
-        // } else {
-        //     dockerhub::DockerHub::new(repo)
-        // }
+        if registry.unwrap_or(String::new()) == "ghcr.io" {
+            ghcr::Ghcr::create_repo(&repo)
+        } else {
+            dockerhub::DockerHub::create_repo(&repo)
+        }
 
-        dockerhub::DockerHub::create_repo(&repo)
+        // dockerhub::DockerHub::create_repo(&repo)
     }
 
     pub fn with_url(url: &str) -> Result<Self, Error> {
