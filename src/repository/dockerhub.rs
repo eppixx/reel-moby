@@ -27,7 +27,7 @@ impl Images {
                 .iter()
                 .map(|d| super::TagDetails {
                     arch: Some(d.architecture.clone()),
-                    size: Some(d.size.clone()),
+                    size: Some(d.size),
                 })
                 .collect(),
         }
@@ -43,7 +43,7 @@ pub struct DockerHub {
 
 impl DockerHub {
     /// fetches tag information with a repository name in the form of organization/repository or library/repository in the case of official images from docker
-    pub fn new(repo: &str) -> Result<super::Repo, Error> {
+    pub fn create_repo(repo: &str) -> Result<super::Repo, Error> {
         let request = format!("https://hub.docker.com/v2/repositories/{}/tags", repo);
         Self::with_url(&request)
     }

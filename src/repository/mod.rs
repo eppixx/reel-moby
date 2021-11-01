@@ -73,7 +73,7 @@ impl Tag {
                 let now = chrono::Utc::now();
                 let rfc3339 = DateTime::parse_from_rfc3339(last_updated).unwrap();
                 let dif = now - rfc3339.with_timezone(&chrono::Utc);
-                format!("{}", format_time_nice(dif))
+                format_time_nice(dif)
             }
         };
         format!("{} vor {} [{}]", self.name, dif, arch)
@@ -96,13 +96,14 @@ impl Repo {
             Err(e) => return Err(Error::Converting(format!("{}", e))),
         };
 
+        //TODO change according to registry
         // if &registry == "ghcr.io" {
         //     //
         // } else {
         //     dockerhub::DockerHub::new(repo)
         // }
 
-        dockerhub::DockerHub::new(&repo)
+        dockerhub::DockerHub::create_repo(&repo)
     }
 
     pub fn with_url(url: &str) -> Result<Self, Error> {
