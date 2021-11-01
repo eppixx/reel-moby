@@ -4,7 +4,7 @@ use termion::event::Key;
 use tui::style::{Color, Style};
 use tui::widgets::{Block, Borders, List, ListState};
 
-use crate::tags;
+use crate::repository;
 
 pub enum Error {
     NoneSelected,
@@ -24,7 +24,7 @@ impl fmt::Display for Error {
 
 enum Line {
     Status(String),
-    Image(tags::Images),
+    Image(repository::Tag),
     NextPage(String),
 }
 
@@ -32,7 +32,7 @@ impl fmt::Display for Line {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Line::Status(s) => write!(f, "{}", s),
-            Line::Image(i) => write!(f, "{}", i),
+            Line::Image(i) => write!(f, "{}", i.get_name_with_details()),
             Line::NextPage(s) => write!(f, "{}", s),
         }
     }
@@ -41,7 +41,7 @@ impl fmt::Display for Line {
 pub struct TagList {
     lines: Vec<Line>,
     state: ListState,
-    tags: Option<tags::Tags>,
+    tags: Option<repository::Repo>,
 }
 
 impl TagList {
@@ -54,15 +54,15 @@ impl TagList {
     }
 
     pub fn with_repo_name(repo: String) -> Self {
-        match tags::Tags::new(repo) {
+        match repository::Repo::new(&repo) {
             Ok(tags) => Self::with_tags(tags),
             Err(_) => Self::with_status("input repo was not found"),
         }
     }
 
-    pub fn with_tags(mut tags: tags::Tags) -> Self {
+    pub fn with_tags(mut tags: repository::Repo) -> Self {
         let mut lines: Vec<Line> = tags
-            .results
+            .get_tags()
             .iter()
             .map(|r| Line::Image(r.clone()))
             .collect();
@@ -136,7 +136,7 @@ impl TagList {
             None => Err(Error::NoneSelected),
             Some(i) => match &self.lines[i] {
                 Line::Status(_) => Err(Error::SelectedStatus),
-                Line::Image(i) => Ok(i.tag_name.clone()),
+                Line::Image(i) => Ok(i.get_name().to_string()),
                 Line::NextPage(_) => {
                     self.load_next_page();
                     Err(Error::NextPageSelected)
@@ -158,12 +158,17 @@ impl TagList {
                     let next_page = self.lines.pop();
 
                     //add tags
-                    for image in &self.tags.as_ref().unwrap().results {
-                        self.lines.push(Line::Image(image.clone()));
+                    match &self.tags {
+                        None => (),
+                        Some(tags) => {
+                            for image in tags.get_tags().iter() {
+                                self.lines.push(Line::Image(image.clone()));
+                            }
+                        }
                     }
 
                     //readd next page
-                    match self.tags.as_ref().unwrap().next_page {
+                    match self.tags.as_ref().unwrap().next_page() {
                         None => (),
                         Some(_) => self.lines.push(next_page.unwrap()),
                     }

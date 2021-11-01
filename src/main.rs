@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use structopt::StructOpt;
 
 mod repo;
-mod tags;
+mod repository;
 mod ui;
 mod widget;
 
