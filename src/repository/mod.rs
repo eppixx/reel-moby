@@ -69,6 +69,11 @@ impl Tag {
         for image in self.details.iter().skip(1) {
             arch.push_str(&format!(", {}", image));
         }
+        let arch = if !arch.is_empty() {
+            format!(" [{}]", arch)
+        } else {
+            String::new()
+        };
 
         let dif = match &self.last_updated {
             None => "".to_string(),
@@ -76,10 +81,12 @@ impl Tag {
                 let now = chrono::Utc::now();
                 let rfc3339 = DateTime::parse_from_rfc3339(last_updated).unwrap();
                 let dif = now - rfc3339.with_timezone(&chrono::Utc);
-                format_time_nice(dif)
+                format!(" vor {}", format_time_nice(dif))
             }
         };
-        format!("{} vor {} [{}]", self.name, dif, arch)
+
+        if dif.is_empty() {}
+        format!("{}{}{}", self.name, dif, arch)
     }
 }
 
