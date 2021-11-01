@@ -1,6 +1,5 @@
 use serde::Deserialize;
 
-use crate::repo;
 use crate::repository::Error;
 
 #[derive(Deserialize, Debug, Clone)]

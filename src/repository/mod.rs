@@ -84,7 +84,6 @@ impl Tag {
 }
 
 pub struct Repo {
-    // name: String,
     tags: Vec<Tag>,
     next_page: Option<String>,
 }
@@ -99,14 +98,11 @@ impl Repo {
             Err(e) => return Err(Error::Converting(format!("{}", e))),
         };
 
-        //TODO change according to registry
-        if registry.unwrap_or(String::new()) == "ghcr.io" {
+        if registry.unwrap_or_default() == "ghcr.io" {
             ghcr::Ghcr::create_repo(&repo)
         } else {
             dockerhub::DockerHub::create_repo(&repo)
         }
-
-        // dockerhub::DockerHub::create_repo(&repo)
     }
 
     pub fn with_url(url: &str) -> Result<Self, Error> {

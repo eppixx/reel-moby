@@ -1,6 +1,5 @@
 use serde::Deserialize;
 
-use crate::repo;
 use crate::repository::Error;
 
 #[derive(Deserialize)]
@@ -10,7 +9,6 @@ struct Token {
 
 #[derive(Deserialize)]
 pub struct Ghcr {
-    name: String,
     tags: Vec<String>,
 }
 
