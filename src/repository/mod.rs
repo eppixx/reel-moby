@@ -1,8 +1,10 @@
-pub mod dockerhub;
+mod dockerhub;
 
 use std::fmt;
 
 use chrono::DateTime;
+
+use crate::repo;
 
 #[derive(Debug, PartialEq)]
 pub enum Error {
@@ -146,5 +148,32 @@ fn format_time_nice(time: chrono::Duration) -> String {
         format!("{} Minuten", time.num_minutes())
     } else {
         format!("{} Sekunden", time.num_seconds())
+    }
+}
+
+/// checks the repo name and may add a prefix for official images
+pub fn check_repo(name: &str) -> Result<String, Error> {
+    let repo = match repo::split_tag_from_repo(name) {
+        Err(e) => return Err(Error::Converting(format!("{}", e))),
+        Ok((name, _)) => name,
+    };
+
+    match repo::split_repo_without_tag(name) {
+        Ok(repo::Repo::Project(s)) => Ok(format!("library/{}", s)),
+        Ok(_) => Ok(repo.to_string()),
+        Err(e) => Err(Error::Converting(format!("{}", e))),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_check_repo() {
+        assert_eq!(super::check_repo("nginx").unwrap(), "library/nginx");
+        assert_eq!(super::check_repo("library/nginx").unwrap(), "library/nginx");
+        assert_eq!(
+            super::check_repo("rocketchat/rocket.chat").unwrap(),
+            "rocketchat/rocket.chat"
+        );
     }
 }

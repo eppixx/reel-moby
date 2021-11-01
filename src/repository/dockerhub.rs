@@ -70,35 +70,4 @@ impl DockerHub {
             next_page: tags.next_page,
         })
     }
-
-    /// checks the repo name and may add a prefix for official images
-    pub fn check_repo(name: &str) -> Result<String, Error> {
-        let repo = match repo::split_tag_from_repo(name) {
-            Err(e) => return Err(Error::Converting(format!("{}", e))),
-            Ok((name, _)) => name,
-        };
-
-        match repo::split_repo_without_tag(name) {
-            Ok(repo::Repo::Project(s)) => Ok(format!("library/{}", s)),
-            Ok(_) => Ok(repo.to_string()),
-            Err(e) => Err(Error::Converting(format!("{}", e))),
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::repository::dockerhub::DockerHub;
-    #[test]
-    fn test_check_repo() {
-        assert_eq!(DockerHub::check_repo("nginx").unwrap(), "library/nginx");
-        assert_eq!(
-            DockerHub::check_repo("library/nginx").unwrap(),
-            "library/nginx"
-        );
-        assert_eq!(
-            DockerHub::check_repo("rocketchat/rocket.chat").unwrap(),
-            "rocketchat/rocket.chat"
-        );
-    }
 }

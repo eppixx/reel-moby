@@ -7,7 +7,7 @@ use tui::backend::TermionBackend;
 use tui::layout::{Constraint, Direction, Layout};
 use tui::Terminal;
 
-use crate::repository::dockerhub;
+use crate::repository;
 use crate::widget::info;
 use crate::widget::repo_entry;
 use crate::widget::service_switcher;
@@ -157,7 +157,7 @@ impl Ui {
                         match ui.services.extract_repo() {
                             Err(e) => ui.info.set_info(&format!("{}", e)),
                             Ok(s) => {
-                                let repo = match dockerhub::DockerHub::check_repo(&s) {
+                                let repo = match repository::check_repo(&s) {
                                     Err(e) => {
                                         ui.info.set_info(&format!("{}", e));
                                         continue;
@@ -178,7 +178,7 @@ impl Ui {
                         match ui.services.extract_repo() {
                             Err(e) => ui.info.set_info(&format!("{}", e)),
                             Ok(s) => {
-                                let repo = match dockerhub::DockerHub::check_repo(&s) {
+                                let repo = match repository::check_repo(&s) {
                                     Err(e) => {
                                         ui.info.set_info(&format!("{}", e));
                                         continue;
