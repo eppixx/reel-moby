@@ -88,13 +88,16 @@ impl DockerHub {
 
 #[cfg(test)]
 mod tests {
-    use crate::repository::dockerhub::Repo;
+    use crate::repository::dockerhub::DockerHub;
     #[test]
     fn test_check_repo() {
-        assert_eq!(Repo::check_repo("nginx").unwrap(), "library/nginx");
-        assert_eq!(Repo::check_repo("library/nginx").unwrap(), "library/nginx");
+        assert_eq!(DockerHub::check_repo("nginx").unwrap(), "library/nginx");
         assert_eq!(
-            Repo::check_repo("rocketchat/rocket.chat").unwrap(),
+            DockerHub::check_repo("library/nginx").unwrap(),
+            "library/nginx"
+        );
+        assert_eq!(
+            DockerHub::check_repo("rocketchat/rocket.chat").unwrap(),
             "rocketchat/rocket.chat"
         );
     }
