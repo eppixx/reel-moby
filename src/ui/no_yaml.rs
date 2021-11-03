@@ -17,6 +17,15 @@ pub enum State {
     SelectTag,
 }
 
+impl std::fmt::Display for State {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            State::EditRepo => write!(f, "Edit repository"),
+            State::SelectTag => write!(f, "Select a tag"),
+        }
+    }
+}
+
 impl std::iter::Iterator for State {
     type Item = Self;
 
@@ -97,6 +106,7 @@ impl NoYaml {
                 Ok(Key::Ctrl('q')) => break 'core,
                 Ok(Key::Char('\t')) => {
                     ui.state.next();
+                    ui.info.set_info(&ui.state);
                 }
                 Ok(Key::Ctrl('r')) => {
                     ui.repo.confirm();
@@ -111,7 +121,7 @@ impl NoYaml {
                 },
                 Ok(Key::Char(key)) => match ui.state {
                     State::EditRepo => {
-                        ui.info.set_info("Editing Repository");
+                        ui.info.set_text("Editing Repository");
                         ui.repo.handle_input(Key::Char(key));
                     }
                     State::SelectTag => {
@@ -120,7 +130,7 @@ impl NoYaml {
                 },
                 Ok(Key::Backspace) => match ui.state {
                     State::EditRepo => {
-                        ui.info.set_info("Editing Repository");
+                        ui.info.set_text("Editing Repository");
                         ui.repo.handle_input(Key::Backspace);
                     }
                     State::SelectTag => (),

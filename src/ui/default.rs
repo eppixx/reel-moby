@@ -28,6 +28,16 @@ pub enum State {
     SelectService,
 }
 
+impl std::fmt::Display for State {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            State::EditRepo => write!(f, "Edit repository"),
+            State::SelectTag => write!(f, "Select a tag"),
+            State::SelectService => write!(f, "Select a image"),
+        }
+    }
+}
+
 impl std::iter::Iterator for State {
     type Item = Self;
 
@@ -103,13 +113,14 @@ impl Ui {
                 Ok(Key::Ctrl('q')) => break 'core, //quit program without saving
                 Ok(Key::Char('\t')) => {
                     ui.state.next();
+                    ui.info.set_info(&ui.state);
                 }
                 Ok(Key::Ctrl('s')) => match ui.services.save() {
                     Err(e) => {
                         ui.info.set_info(&format!("{}", e));
                         continue;
                     }
-                    Ok(_) => ui.info.set_info("Saved compose file"),
+                    Ok(_) => ui.info.set_text("Saved compose file"),
                 },
                 Ok(Key::Ctrl('r')) => {
                     ui.repo.confirm();
@@ -139,7 +150,7 @@ impl Ui {
                 Ok(Key::Char(key)) => match ui.state {
                     State::SelectService => (),
                     State::EditRepo => {
-                        ui.info.set_info("Editing Repository");
+                        ui.info.set_text("Editing Repository");
                         ui.repo.handle_input(Key::Char(key));
                     }
                     State::SelectTag => (),
@@ -147,7 +158,7 @@ impl Ui {
                 Ok(Key::Backspace) => match ui.state {
                     State::SelectService => (),
                     State::EditRepo => {
-                        ui.info.set_info("Editing Repository");
+                        ui.info.set_text("Editing Repository");
                         ui.repo.handle_input(Key::Backspace);
                     }
                     State::SelectTag => (),
