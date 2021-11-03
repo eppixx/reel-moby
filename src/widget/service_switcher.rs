@@ -34,6 +34,7 @@ pub struct ServiceSwitcher {
 
 impl ServiceSwitcher {
     pub fn new(file: &Option<PathBuf>) -> Option<Self> {
+        //gather possible filenames
         let mut file_list = vec![
             PathBuf::from("docker-compose.yml"),
             PathBuf::from("docker-compose.yaml"),
@@ -43,6 +44,7 @@ impl ServiceSwitcher {
             Some(file) => file_list.insert(0, file.clone()),
         }
 
+        //try filenames
         for file in file_list {
             let list = match File::open(&file) {
                 Err(_) => continue,

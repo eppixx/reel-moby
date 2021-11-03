@@ -27,10 +27,12 @@ impl Info {
             .highlight_style(Style::default().bg(Color::Black))
     }
 
+    /// set a text to display
     pub fn set_text(&mut self, info: &str) {
         self.info = String::from(info);
     }
 
+    /// print a text to display
     pub fn set_info(&mut self, text: &dyn std::fmt::Display) {
         self.info = format!("{}", text);
     }
