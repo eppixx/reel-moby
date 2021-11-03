@@ -25,6 +25,9 @@ pub enum Repo {
 }
 
 /// check if yaml line matches and returns the split of repo string and rest
+/// the first &str is the image tag
+/// it will be used to not change the identation
+/// the second &str will the the identifier for the image
 pub fn match_yaml_image(input: &str) -> Result<(&str, &str), Error> {
     lazy_static::lazy_static! {
         static ref REGEX: Regex = Regex::new(r"^( +image *: *)([a-z0-9\./:]+)").unwrap();
@@ -37,6 +40,7 @@ pub fn match_yaml_image(input: &str) -> Result<(&str, &str), Error> {
     Ok((caps.get(1).unwrap().as_str(), caps.get(2).unwrap().as_str()))
 }
 
+/// takes the identifier and splits off the tag it exists
 pub fn split_tag_from_repo(input: &str) -> Result<(&str, &str), Error> {
     lazy_static::lazy_static! {
         static ref REGEX: Regex = Regex::new(r"^([a-z0-9\./[^:]]*):?([a-z0-9._\-]*)").unwrap();
@@ -59,6 +63,7 @@ pub fn split_tag_from_repo(input: &str) -> Result<(&str, &str), Error> {
     Ok((front, back))
 }
 
+/// takes an identifier and changes it to a Repo enum
 pub fn split_repo_without_tag(repo: &str) -> Result<Repo, Error> {
     let repo = repo.trim();
     let split_repo: Vec<&str> = repo.split('/').collect();
