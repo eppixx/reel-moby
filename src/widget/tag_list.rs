@@ -45,6 +45,7 @@ pub struct TagList {
 }
 
 impl TagList {
+    /// shows a text in the list and no tags
     pub fn with_status(status: &str) -> Self {
         Self {
             lines: vec![Line::Status(String::from(status))],
@@ -53,6 +54,7 @@ impl TagList {
         }
     }
 
+    /// list the tags of the repository if the input is valid
     pub fn with_repo_name(repo: String) -> Self {
         match repository::Repo::new(&repo) {
             Ok(tags) => Self::with_tags(tags),
@@ -60,7 +62,8 @@ impl TagList {
         }
     }
 
-    pub fn with_tags(mut tags: repository::Repo) -> Self {
+    /// list the tags of the input
+    fn with_tags(mut tags: repository::Repo) -> Self {
         let mut lines: Vec<Line> = tags
             .get_tags()
             .iter()
