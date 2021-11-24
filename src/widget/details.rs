@@ -12,9 +12,9 @@ impl Details {
         Self { details: vec![] }
     }
 
-    pub fn with_list(details: &Vec<crate::repository::TagDetails>) -> Self {
+    pub fn with_list(details: &[crate::repository::TagDetails]) -> Self {
         let mut detail = Self {
-            details: details.clone(),
+            details: details.to_owned(),
         };
 
         detail.details.sort_by(|a, b| a.arch.cmp(&b.arch));
@@ -40,7 +40,7 @@ impl Details {
             .get_details()
             .iter()
             .map(|l| {
-                tui::widgets::ListItem::new(format!("{}", l))
+                tui::widgets::ListItem::new(l.to_string())
                     .style(Style::default().fg(Color::White).bg(Color::Black))
             })
             .collect();
