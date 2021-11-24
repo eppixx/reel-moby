@@ -30,7 +30,7 @@ pub enum Repo {
 /// the second &str will the the identifier for the image
 pub fn match_yaml_image(input: &str) -> Result<(&str, &str), Error> {
     lazy_static::lazy_static! {
-        static ref REGEX: Regex = Regex::new(r"^( +image *: *)([a-z0-9\./:]+)").unwrap();
+        static ref REGEX: Regex = Regex::new(r"^( +image *: *)([a-z0-9\-\./:]+)").unwrap();
     }
     let caps = match REGEX.captures(input) {
         Some(caps) => caps,
@@ -103,58 +103,79 @@ mod tests {
 
     #[test]
     fn test_split_repo_without_tag() {
-        use crate::repo::split_repo_without_tag as test_fn;
-        assert_eq!(test_fn(""), Err(Error::MisformedInput));
-        assert_eq!(test_fn("NGINX"), Err(Error::MisformedInput));
-        assert_eq!(test_fn("nginx"), Ok(Repo::Project("nginx".into())));
-        assert_eq!(
-            test_fn("library/nginx"),
-            Ok(Repo::WithOrga("library".into(), "nginx".into()))
-        );
-        assert_eq!(
-            test_fn("ghcr.io/library/nginx"),
-            Ok(Repo::WithServer(
-                "ghcr.io".into(),
-                "library".into(),
-                "nginx".into(),
-            ))
-        );
+        let input: Vec<(&str, Result<Repo, Error>)> = vec![
+            ("", Err(Error::MisformedInput)),
+            ("NGINX", Err(Error::MisformedInput)),
+            ("nginx", Ok(Repo::Project("nginx".into()))),
+            (
+                "library/nginx",
+                Ok(Repo::WithOrga("library".into(), "nginx".into())),
+            ),
+            (
+                "ghcr.io/library/nginx",
+                Ok(Repo::WithServer(
+                    "ghcr.io".into(),
+                    "library".into(),
+                    "nginx".into(),
+                )),
+            ),
+            (
+                "te-st/test-hypen",
+                Ok(Repo::WithOrga("te-st".into(), "test-hypen".into())),
+            ),
+            (
+                "test/test.dot",
+                Ok(Repo::WithOrga("test".into(), "test.dot".into())),
+            ),
+        ];
+
+        for i in input {
+            assert_eq!(super::split_repo_without_tag(i.0), i.1);
+        }
     }
 
     #[test]
     fn test_match_yaml_image() {
-        use crate::repo::match_yaml_image as test_fn;
-        assert_eq!(test_fn(""), Err(Error::NoTagFound));
-        assert_eq!(test_fn("version: '2'"), Err(Error::NoTagFound));
-        assert_eq!(test_fn("image: "), Err(Error::NoTagFound));
-        assert_eq!(test_fn("  image: "), Err(Error::NoTagFound));
-        assert_eq!(test_fn("  image: nginx"), Ok(("  image: ", "nginx")));
-        assert_eq!(
-            test_fn("  image: library/nginx"),
-            Ok(("  image: ", "library/nginx"))
-        );
-        assert_eq!(
-            test_fn("  image: ghcr.io/library/nginx"),
-            Ok(("  image: ", "ghcr.io/library/nginx"))
-        );
-        assert_eq!(test_fn("#   image: nginx"), Err(Error::NoTagFound));
-        assert_eq!(
-            test_fn("   image: nginx #comment"),
-            Ok(("   image: ", "nginx"))
-        );
+        let input: Vec<(&str, Result<(&str, &str), Error>)> = vec![
+            ("", Err(Error::NoTagFound)),
+            ("version: '2'", Err(Error::NoTagFound)),
+            ("image: ", Err(Error::NoTagFound)),
+            ("  image: ", Err(Error::NoTagFound)),
+            ("  image: nginx", Ok(("  image: ", "nginx"))),
+            ("  image: library/nginx", Ok(("  image: ", "library/nginx"))),
+            (
+                "  image: gchr.io/library/nginx",
+                Ok(("  image: ", "gchr.io/library/nginx")),
+            ),
+            ("  image: nginx # comment", Ok(("  image: ", "nginx"))),
+            ("  image: test-hyphen", Ok(("  image: ", "test-hyphen"))),
+            ("  image: test.dot", Ok(("  image: ", "test.dot"))),
+        ];
+
+        for i in input {
+            assert_eq!(super::match_yaml_image(i.0), i.1);
+        }
     }
 
     #[test]
     fn test_split_tag_from_repo() {
-        use crate::repo::split_tag_from_repo as test_fn;
-        assert_eq!(test_fn("nginx"), Ok(("nginx", "")));
-        assert_eq!(test_fn("library/nginx"), Ok(("library/nginx", "")));
-        assert_eq!(
-            test_fn("ghcr.io/library/nginx"),
-            Ok(("ghcr.io/library/nginx", ""))
-        );
-        assert_eq!(test_fn("nginx:"), Ok(("nginx", "")));
-        assert_eq!(test_fn("nginx:1"), Ok(("nginx", "1")));
-        assert_eq!(test_fn("nginx:latest"), Ok(("nginx", "latest")));
+        let input: Vec<(&str, Result<(&str, &str), super::Error>)> = vec![
+            ("nginx", Ok(("nginx", ""))),
+            ("library/nginx", Ok(("library/nginx", ""))),
+            ("ghcr.io/library/nginx", Ok(("ghcr.io/library/nginx", ""))),
+            ("nginx:", Ok(("nginx", ""))),
+            ("nginx:1", Ok(("nginx", "1"))),
+            ("nginx:latest", Ok(("nginx", "latest"))),
+            ("hy-phen:latest", Ok(("hy-phen", "latest"))),
+            ("test.dot:latest", Ok(("test.dot", "latest"))),
+            (
+                "woodpeckerci/woodpecker-server",
+                Ok(("woodpeckerci/woodpecker-server", "")),
+            ),
+        ];
+
+        for i in input {
+            assert_eq!(super::split_tag_from_repo(i.0), i.1);
+        }
     }
 }
