@@ -6,6 +6,7 @@ use tui::backend::TermionBackend;
 use tui::layout::{Constraint, Direction, Layout};
 use tui::Terminal;
 
+use crate::widget::details;
 use crate::widget::info;
 use crate::widget::repo_entry;
 use crate::widget::tag_list;
@@ -42,6 +43,7 @@ pub struct NoYaml {
     state: State,
     repo: repo_entry::RepoEntry,
     tags: tag_list::TagList,
+    details: details::Details,
     info: info::Info,
 }
 
@@ -61,6 +63,7 @@ impl NoYaml {
             state: State::EditRepo,
             repo,
             tags: tag_list::TagList::with_status("Tags are empty"),
+            details: details::Details::new(),
             info: info::Info::new("could not find a docker-compose file"),
         };
 
@@ -96,7 +99,12 @@ impl NoYaml {
 
                     rect.render_widget(ui.repo.render(ui.state == State::EditRepo), chunks[0]);
                     let (list, state) = ui.tags.render(ui.state == State::SelectTag);
-                    rect.render_stateful_widget(list, chunks[1], state);
+                    let more_chunks = Layout::default()
+                        .direction(Direction::Horizontal)
+                        .constraints([Constraint::Min(15), Constraint::Length(28)].as_ref())
+                        .split(chunks[1]);
+                    rect.render_stateful_widget(list, more_chunks[0], state);
+                    rect.render_widget(ui.details.render(), more_chunks[1]);
                     rect.render_widget(ui.info.render(), chunks[2]);
                 })
                 .unwrap();
@@ -137,11 +145,17 @@ impl NoYaml {
                 },
                 Ok(Key::Up) => match ui.state {
                     State::EditRepo => (),
-                    State::SelectTag => ui.tags.handle_input(Key::Up),
+                    State::SelectTag => {
+                        ui.tags.handle_input(Key::Up);
+                        ui.details = ui.tags.create_detail_widget();
+                    }
                 },
                 Ok(Key::Down) => match ui.state {
                     State::EditRepo => (),
-                    State::SelectTag => ui.tags.handle_input(Key::Down),
+                    State::SelectTag => {
+                        ui.tags.handle_input(Key::Down);
+                        ui.details = ui.tags.create_detail_widget();
+                    }
                 },
                 _ => (),
             }
