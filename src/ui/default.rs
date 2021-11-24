@@ -18,6 +18,7 @@ pub struct Ui {
     repo: crate::widget::repo_entry::RepoEntry,
     tags: crate::widget::tag_list::TagList,
     services: crate::widget::service_switcher::ServiceSwitcher,
+    details: crate::widget::details::Details,
     info: crate::widget::info::Info,
 }
 
@@ -66,6 +67,7 @@ impl Ui {
             repo: repo_entry::RepoEntry::new(repo_id),
             tags: tag_list::TagList::with_status("Tags are empty"),
             services: service_switcher::ServiceSwitcher::new(&opt.file).unwrap(),
+            details: crate::widget::details::Details::new(),
             info: info::Info::new("Select image of edit Repository"),
         };
 
@@ -93,6 +95,7 @@ impl Ui {
                                 Constraint::Min(9),
                                 Constraint::Length(3),
                                 Constraint::Min(7),
+                                Constraint::Min(7),
                                 Constraint::Length(2),
                             ]
                             .as_ref(),
@@ -104,7 +107,8 @@ impl Ui {
                     rect.render_widget(ui.repo.render(ui.state == State::EditRepo), chunks[1]);
                     let (list, state) = ui.tags.render(ui.state == State::SelectTag);
                     rect.render_stateful_widget(list, chunks[2], state);
-                    rect.render_widget(ui.info.render(), chunks[3]);
+                    rect.render_widget(ui.details.render(), chunks[3]);
+                    rect.render_widget(ui.info.render(), chunks[4]);
                 })
                 .unwrap();
 
@@ -182,7 +186,10 @@ impl Ui {
                     }
                     State::SelectService => (),
                     State::EditRepo => (),
-                    State::SelectTag => ui.tags.handle_input(Key::Up),
+                    State::SelectTag => {
+                        ui.tags.handle_input(Key::Up);
+                        ui.details = ui.tags.create_detail_widget();
+                    }
                 },
                 Ok(Key::Down) => match ui.state {
                     State::SelectService if ui.services.find_next_match() => {
@@ -203,7 +210,10 @@ impl Ui {
                     }
                     State::SelectService => (),
                     State::EditRepo => (),
-                    State::SelectTag => ui.tags.handle_input(Key::Down),
+                    State::SelectTag => {
+                        ui.tags.handle_input(Key::Down);
+                        ui.details = ui.tags.create_detail_widget();
+                    }
                 },
                 _ => (),
             }

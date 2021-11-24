@@ -5,6 +5,8 @@ use crate::repository::Error;
 #[derive(Deserialize, Debug, Clone)]
 struct ImageDetails {
     architecture: String,
+    os: String,
+    variant: Option<String>,
     size: usize,
 }
 
@@ -25,7 +27,12 @@ impl Images {
                 .images
                 .iter()
                 .map(|d| super::TagDetails {
-                    arch: Some(d.architecture.clone()),
+                    arch: Some(format!(
+                        "{}{}",
+                        d.architecture.clone(),
+                        d.variant.clone().unwrap_or_default()
+                    )),
+                    os: Some(d.os.clone()),
                     size: Some(d.size),
                 })
                 .collect(),

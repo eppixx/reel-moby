@@ -29,8 +29,9 @@ impl fmt::Display for Error {
 
 #[derive(Clone)]
 pub struct TagDetails {
-    arch: Option<String>,
-    size: Option<usize>,
+    pub arch: Option<String>,
+    pub os: Option<String>,
+    pub size: Option<usize>,
 }
 
 impl fmt::Display for TagDetails {
@@ -87,6 +88,10 @@ impl Tag {
 
         if dif.is_empty() {}
         format!("{}{}{}", self.name, dif, arch)
+    }
+
+    pub fn get_details(&self) -> &Vec<TagDetails> {
+        &self.details
     }
 }
 

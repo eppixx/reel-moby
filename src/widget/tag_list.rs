@@ -116,6 +116,18 @@ impl TagList {
         (items, &mut self.state)
     }
 
+    pub fn create_detail_widget(&self) -> crate::widget::details::Details {
+        use crate::widget::details::Details;
+
+        match self.state.selected() {
+            None => Details::new(),
+            Some(i) => match &self.lines[i] {
+                Line::Image(t) => Details::with_list(t.get_details()),
+                _ => Details::new(),
+            },
+        }
+    }
+
     pub fn handle_input(&mut self, key: termion::event::Key) {
         match key {
             Key::Down => self.next(),
