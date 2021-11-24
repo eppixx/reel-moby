@@ -95,7 +95,6 @@ impl Ui {
                                 Constraint::Min(9),
                                 Constraint::Length(3),
                                 Constraint::Min(7),
-                                Constraint::Min(7),
                                 Constraint::Length(2),
                             ]
                             .as_ref(),
@@ -106,9 +105,13 @@ impl Ui {
                     rect.render_stateful_widget(list, chunks[0], state);
                     rect.render_widget(ui.repo.render(ui.state == State::EditRepo), chunks[1]);
                     let (list, state) = ui.tags.render(ui.state == State::SelectTag);
-                    rect.render_stateful_widget(list, chunks[2], state);
-                    rect.render_widget(ui.details.render(), chunks[3]);
-                    rect.render_widget(ui.info.render(), chunks[4]);
+                    let more_chunks = Layout::default()
+                        .direction(Direction::Horizontal)
+                        .constraints([Constraint::Min(15), Constraint::Length(28)].as_ref())
+                        .split(chunks[2]);
+                    rect.render_stateful_widget(list, more_chunks[0], state);
+                    rect.render_widget(ui.details.render(), more_chunks[1]);
+                    rect.render_widget(ui.info.render(), chunks[3]);
                 })
                 .unwrap();
 
