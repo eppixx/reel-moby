@@ -27,7 +27,7 @@ impl fmt::Display for Error {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct TagDetails {
     pub arch: Option<String>,
     pub os: Option<String>,

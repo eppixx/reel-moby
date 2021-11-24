@@ -18,6 +18,7 @@ impl Details {
         };
 
         detail.details.sort_by(|a, b| a.arch.cmp(&b.arch));
+        detail.details.dedup();
         detail
     }
 
