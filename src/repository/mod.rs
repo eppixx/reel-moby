@@ -70,11 +70,6 @@ impl Tag {
         for image in self.details.iter().skip(1) {
             arch.push_str(&format!(", {}", image));
         }
-        let arch = if !arch.is_empty() {
-            format!(" [{}]", arch)
-        } else {
-            String::new()
-        };
 
         let dif = match &self.last_updated {
             None => "".to_string(),
@@ -87,7 +82,7 @@ impl Tag {
         };
 
         if dif.is_empty() {}
-        format!("{}{}{}", self.name, dif, arch)
+        format!("{}{}", self.name, dif)
     }
 
     pub fn get_details(&self) -> &Vec<TagDetails> {

@@ -92,7 +92,7 @@ impl Ui {
                         .direction(Direction::Vertical)
                         .constraints(
                             [
-                                Constraint::Min(9),
+                                Constraint::Length(10),
                                 Constraint::Length(3),
                                 Constraint::Min(7),
                                 Constraint::Length(2),
