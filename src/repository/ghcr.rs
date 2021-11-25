@@ -33,7 +33,6 @@ impl Ghcr {
             .header(reqwest::header::AUTHORIZATION, format!("Bearer {}", token))
             .send()
         {
-            // let response = match reqwest::blocking::get(url) {
             Ok(result) => result,
             Err(e) => return Err(Error::Fetching(format!("reqwest error: {}", e))),
         };
