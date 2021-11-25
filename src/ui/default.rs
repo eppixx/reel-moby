@@ -54,12 +54,9 @@ impl std::iter::Iterator for State {
 
 impl Ui {
     pub fn run(opt: &Opt) {
-        let (repo_id, load_repo) = match &opt.repo {
-            None => (
-                "enter a repository here or select one from file widget",
-                false,
-            ),
-            Some(repo) => (String::as_str(repo), true),
+        let repo_id = match &opt.repo {
+            None => None,
+            Some(repo) => Some(String::as_str(repo)),
         };
 
         let mut ui = Ui {
@@ -71,7 +68,7 @@ impl Ui {
             info: info::Info::new("Select image of edit Repository"),
         };
 
-        if load_repo {
+        if opt.repo.is_none() {
             ui.tags = tag_list::TagList::with_repo_name(ui.repo.get());
         }
 

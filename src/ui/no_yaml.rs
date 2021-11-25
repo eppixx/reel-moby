@@ -49,26 +49,21 @@ pub struct NoYaml {
 
 impl NoYaml {
     pub fn run(opt: &Opt) {
-        let (repo, load_repo) = match &opt.repo {
-            None => (
-                repo_entry::RepoEntry::new(
-                    "enter a repository or select one from docker-compose.yml",
-                ),
-                false,
-            ),
-            Some(repo_id) => (repo_entry::RepoEntry::new(repo_id), true),
+        let repo_id = match &opt.repo {
+            None => None,
+            Some(repo) => Some(String::as_str(repo)),
         };
 
         let mut ui = NoYaml {
             state: State::EditRepo,
-            repo,
+            repo: repo_entry::RepoEntry::new(repo_id),
             tags: tag_list::TagList::with_status("Tags are empty"),
             details: details::Details::new(),
             info: info::Info::new("could not find a docker-compose file"),
         };
 
         // load tags if a repository was given thorugh paramter
-        if load_repo {
+        if opt.repo.is_none() {
             ui.tags = tag_list::TagList::with_repo_name(ui.repo.get());
         }
 
