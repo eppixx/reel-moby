@@ -27,7 +27,11 @@ impl Details {
         for d in &self.details {
             lines.push(format!(
                 "{:^10}|{:^6}|{:^6}",
-                d.arch.clone().unwrap_or_default(),
+                format!(
+                    "{}{}",
+                    d.arch.clone().unwrap_or_default(),
+                    d.variant.clone().unwrap_or_default()
+                ),
                 d.os.clone().unwrap_or_default(),
                 format!("{}MB", d.size.unwrap_or_default() / 1024 / 1024)
             ));
