@@ -27,11 +27,8 @@ impl Images {
                 .images
                 .iter()
                 .map(|d| super::TagDetails {
-                    arch: Some(format!(
-                        "{}{}",
-                        d.architecture.clone(),
-                        d.variant.clone().unwrap_or_default()
-                    )),
+                    arch: Some(d.architecture.clone()),
+                    variant: Some(d.variant.clone().unwrap_or_default()),
                     os: Some(d.os.clone()),
                     size: Some(d.size),
                 })

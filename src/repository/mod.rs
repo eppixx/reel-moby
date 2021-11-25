@@ -30,23 +30,9 @@ impl fmt::Display for Error {
 #[derive(Clone, PartialEq)]
 pub struct TagDetails {
     pub arch: Option<String>,
+    pub variant: Option<String>,
     pub os: Option<String>,
     pub size: Option<usize>,
-}
-
-impl fmt::Display for TagDetails {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let size = match self.size {
-            None => "".to_string(),
-            Some(s) => (s / 1024 / 1024).to_string(),
-        };
-        write!(
-            f,
-            "{}|{}MB",
-            self.arch.as_ref().unwrap_or(&"".to_string()),
-            size
-        )
-    }
 }
 
 #[derive(Clone)]
@@ -62,22 +48,13 @@ impl Tag {
     }
 
     pub fn get_name_with_details(&self) -> String {
-        //architecture infos
-        let mut arch = String::new();
-        for image in self.details.iter().take(1) {
-            arch.push_str(&format!("{}", image));
-        }
-        for image in self.details.iter().skip(1) {
-            arch.push_str(&format!(", {}", image));
-        }
-
         let dif = match &self.last_updated {
             None => "".to_string(),
             Some(last_updated) => {
                 let now = chrono::Utc::now();
                 let rfc3339 = DateTime::parse_from_rfc3339(last_updated).unwrap();
                 let dif = now - rfc3339.with_timezone(&chrono::Utc);
-                format!(" vor {}", format_time_nice(dif))
+                format!(", {} old", format_time_nice(dif))
             }
         };
 
@@ -135,23 +112,23 @@ impl Repo {
 /// converts a given duration to a readable string
 fn format_time_nice(time: chrono::Duration) -> String {
     if time.num_weeks() == 52 {
-        format!("{} Jahr", (time.num_weeks() / 52) as i32)
+        format!("{} Year", (time.num_weeks() / 52) as i32)
     } else if time.num_weeks() > 103 {
-        format!("{} Jahren", (time.num_weeks() / 52) as i32)
+        format!("{} Years", (time.num_weeks() / 52) as i32)
     } else if time.num_days() == 1 {
-        format!("{} Tag", time.num_days())
+        format!("{} Day", time.num_days())
     } else if time.num_days() > 1 {
-        format!("{} Tagen", time.num_days())
+        format!("{} Days", time.num_days())
     } else if time.num_hours() == 1 {
-        format!("{} Stunde", time.num_hours())
+        format!("{} Hour", time.num_hours())
     } else if time.num_hours() > 1 {
-        format!("{} Stunden", time.num_hours())
+        format!("{} Hours", time.num_hours())
     } else if time.num_minutes() == 1 {
         format!("{} Minute", time.num_minutes())
     } else if time.num_minutes() > 1 {
-        format!("{} Minuten", time.num_minutes())
+        format!("{} Minutes", time.num_minutes())
     } else {
-        format!("{} Sekunden", time.num_seconds())
+        format!("{} Seconds", time.num_seconds())
     }
 }
 
