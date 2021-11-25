@@ -64,11 +64,10 @@ impl RepoEntry {
             Key::Backspace => {
                 if self.default_text {
                     self.text = String::new();
-                    self.changed = true;
                 } else {
                     self.text.pop();
-                    self.changed = true;
                 }
+                self.changed = true;
             }
             Key::Esc => {
                 self.text = self.old_text.clone();

@@ -54,10 +54,7 @@ impl std::iter::Iterator for State {
 
 impl Ui {
     pub fn run(opt: &Opt) {
-        let repo_id = match &opt.repo {
-            None => None,
-            Some(repo) => Some(String::as_str(repo)),
-        };
+        let repo_id = opt.repo.as_ref().map(|repo| String::as_str(repo));
 
         let mut ui = Ui {
             state: State::SelectService,
