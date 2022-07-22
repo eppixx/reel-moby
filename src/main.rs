@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 use structopt::StructOpt;
 
+mod common;
 mod repo;
 mod repository;
 mod ui;

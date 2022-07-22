@@ -5,6 +5,7 @@ use std::fmt;
 
 use chrono::DateTime;
 
+use crate::common::display_duration_ext::DisplayDurationExt;
 use crate::repo;
 
 #[derive(Debug, PartialEq)]
@@ -54,7 +55,7 @@ impl Tag {
                 let now = chrono::Utc::now();
                 let rfc3339 = DateTime::parse_from_rfc3339(last_updated).unwrap();
                 let dif = now - rfc3339.with_timezone(&chrono::Utc);
-                format!(", {} old", format_time_nice(dif))
+                format!(", {} old", dif.display())
             }
         };
 
@@ -106,29 +107,6 @@ impl Repo {
             },
             None => None,
         }
-    }
-}
-
-/// converts a given duration to a readable string
-fn format_time_nice(time: chrono::Duration) -> String {
-    if time.num_weeks() == 52 {
-        format!("{} Year", (time.num_weeks() / 52) as i32)
-    } else if time.num_weeks() > 103 {
-        format!("{} Years", (time.num_weeks() / 52) as i32)
-    } else if time.num_days() == 1 {
-        format!("{} Day", time.num_days())
-    } else if time.num_days() > 1 {
-        format!("{} Days", time.num_days())
-    } else if time.num_hours() == 1 {
-        format!("{} Hour", time.num_hours())
-    } else if time.num_hours() > 1 {
-        format!("{} Hours", time.num_hours())
-    } else if time.num_minutes() == 1 {
-        format!("{} Minute", time.num_minutes())
-    } else if time.num_minutes() > 1 {
-        format!("{} Minutes", time.num_minutes())
-    } else {
-        format!("{} Seconds", time.num_seconds())
     }
 }
 
