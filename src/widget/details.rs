@@ -26,14 +26,14 @@ impl Details {
         let mut lines = vec![format!("{:^10}|{:^6}|{:^6}", "ARCH", "OS", "SIZE")];
         for d in &self.details {
             lines.push(format!(
-                "{:^10}|{:^6}|{:^6}",
+                "{:^10}|{:^6}|{:^6}MB",
                 format!(
                     "{}{}",
                     d.arch.clone().unwrap_or_default(),
                     d.variant.clone().unwrap_or_default()
                 ),
                 d.os.clone().unwrap_or_default(),
-                format!("{}MB", d.size.unwrap_or_default() / 1024 / 1024)
+                d.size.unwrap_or_default() / 1024 / 1024,
             ));
         }
         lines

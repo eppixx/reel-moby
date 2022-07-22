@@ -49,7 +49,7 @@ pub struct NoYaml {
 
 impl NoYaml {
     pub fn run(opt: &Opt) {
-        let repo_id = opt.repo.as_ref().map(|repo| String::as_str(repo));
+        let repo_id = opt.repo.as_deref();
 
         let mut ui = NoYaml {
             state: State::EditRepo,
