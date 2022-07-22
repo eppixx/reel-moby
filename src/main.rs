@@ -10,10 +10,6 @@ mod widget;
 /// helps you searching or updating tags of your used docker images
 #[derive(StructOpt, Debug)]
 pub struct Opt {
-    /// Show architectures of images and their sizes
-    #[structopt(short, long)]
-    verbose: bool,
-
     /// A custom path to a docker-compose file
     #[structopt(short, long, parse(from_os_str))]
     file: Option<PathBuf>,
