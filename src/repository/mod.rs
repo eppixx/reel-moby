@@ -1,5 +1,4 @@
 mod dockerhub;
-mod ghcr;
 
 use std::fmt;
 
@@ -83,10 +82,10 @@ impl Repo {
             Err(e) => return Err(Error::Converting(format!("{}", e))),
         };
 
-        if registry.unwrap_or_default() == "ghcr.io" {
-            ghcr::Ghcr::create_repo(&repo)
-        } else {
+        if registry.unwrap_or_default().is_empty() {
             dockerhub::DockerHub::create_repo(&repo)
+        } else {
+            return Err(Error::Converting("This registry is not supported".into()));
         }
     }
 
