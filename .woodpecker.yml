@@ -20,7 +20,7 @@ pipeline:
     # http://plugins.drone.io/drone-plugins/drone-github-release/
     image: plugins/github-release
     files: target/release/reel-moby
-    secrets: [github_release_api_key]
+    secrets: [github_api_key]
     when:
       event: tag
       tag: v*
