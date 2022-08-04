@@ -1,10 +1,11 @@
-use std::{io, thread};
-
+use anyhow::Result;
 use termion::event::Key;
 use termion::raw::IntoRawMode;
 use tui::backend::TermionBackend;
 use tui::layout::{Constraint, Direction, Layout};
 use tui::Terminal;
+
+use std::{io, thread};
 
 use crate::widget::details;
 use crate::widget::info;
@@ -48,7 +49,7 @@ pub struct NoYaml {
 }
 
 impl NoYaml {
-    pub fn run(opt: &Opt) {
+    pub fn run(opt: &Opt) -> Result<()> {
         let repo_id = opt.repo.as_deref();
 
         let mut ui = NoYaml {
@@ -65,9 +66,9 @@ impl NoYaml {
         }
 
         //setup tui
-        let stdout = io::stdout().into_raw_mode().unwrap();
+        let stdout = io::stdout().into_raw_mode()?;
         let backend = TermionBackend::new(stdout);
-        let mut terminal = Terminal::new(backend).unwrap();
+        let mut terminal = Terminal::new(backend)?;
 
         //setup input thread
         let receiver = super::spawn_stdin_channel();
@@ -75,31 +76,29 @@ impl NoYaml {
         //core interaction loop
         'core: loop {
             //draw
-            terminal
-                .draw(|rect| {
-                    let chunks = Layout::default()
-                        .direction(Direction::Vertical)
-                        .constraints(
-                            [
-                                Constraint::Length(3),
-                                Constraint::Min(7),
-                                Constraint::Length(2),
-                            ]
-                            .as_ref(),
-                        )
-                        .split(rect.size());
+            terminal.draw(|rect| {
+                let chunks = Layout::default()
+                    .direction(Direction::Vertical)
+                    .constraints(
+                        [
+                            Constraint::Length(3),
+                            Constraint::Min(7),
+                            Constraint::Length(2),
+                        ]
+                        .as_ref(),
+                    )
+                    .split(rect.size());
 
-                    rect.render_widget(ui.repo.render(ui.state == State::EditRepo), chunks[0]);
-                    let (list, state) = ui.tags.render(ui.state == State::SelectTag);
-                    let more_chunks = Layout::default()
-                        .direction(Direction::Horizontal)
-                        .constraints([Constraint::Min(15), Constraint::Length(28)].as_ref())
-                        .split(chunks[1]);
-                    rect.render_stateful_widget(list, more_chunks[0], state);
-                    rect.render_widget(ui.details.render(), more_chunks[1]);
-                    rect.render_widget(ui.info.render(), chunks[2]);
-                })
-                .unwrap();
+                rect.render_widget(ui.repo.render(ui.state == State::EditRepo), chunks[0]);
+                let (list, state) = ui.tags.render(ui.state == State::SelectTag);
+                let more_chunks = Layout::default()
+                    .direction(Direction::Horizontal)
+                    .constraints([Constraint::Min(15), Constraint::Length(28)].as_ref())
+                    .split(chunks[1]);
+                rect.render_stateful_widget(list, more_chunks[0], state);
+                rect.render_widget(ui.details.render(), more_chunks[1]);
+                rect.render_widget(ui.info.render(), chunks[2]);
+            })?;
 
             //handle input
             match receiver.try_recv() {
@@ -156,6 +155,7 @@ impl NoYaml {
             thread::sleep(std::time::Duration::from_millis(32));
         }
 
-        terminal.clear().unwrap();
+        terminal.clear()?;
+        Ok(())
     }
 }

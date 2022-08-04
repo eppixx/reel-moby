@@ -1,17 +1,18 @@
-use std::{io, thread};
-
-use crate::Opt;
+use anyhow::Result;
 use termion::event::Key;
 use termion::raw::IntoRawMode;
 use tui::backend::TermionBackend;
 use tui::layout::{Constraint, Direction, Layout};
 use tui::Terminal;
 
+use std::{io, thread};
+
 use crate::repository;
 use crate::widget::info;
 use crate::widget::repo_entry;
 use crate::widget::service_switcher;
 use crate::widget::tag_list;
+use crate::Opt;
 
 pub struct Ui {
     state: State,
@@ -53,14 +54,14 @@ impl std::iter::Iterator for State {
 }
 
 impl Ui {
-    pub fn run(opt: &Opt) {
+    pub fn run(opt: &Opt, switcher: service_switcher::ServiceSwitcher) -> Result<()> {
         let repo_id = opt.repo.as_deref();
 
         let mut ui = Ui {
             state: State::SelectService,
             repo: repo_entry::RepoEntry::new(repo_id),
             tags: tag_list::TagList::with_status("Tags are empty"),
-            services: service_switcher::ServiceSwitcher::new(&opt.file).unwrap(),
+            services: switcher,
             details: crate::widget::details::Details::new(),
             info: info::Info::new("Select image of edit Repository"),
         };
@@ -70,9 +71,9 @@ impl Ui {
         }
 
         //setup tui
-        let stdout = io::stdout().into_raw_mode().unwrap();
+        let stdout = io::stdout().into_raw_mode()?;
         let backend = TermionBackend::new(stdout);
-        let mut terminal = Terminal::new(backend).unwrap();
+        let mut terminal = Terminal::new(backend)?;
 
         //setup input thread
         let receiver = super::spawn_stdin_channel();
@@ -80,34 +81,32 @@ impl Ui {
         //core interaction loop
         'core: loop {
             //draw
-            terminal
-                .draw(|rect| {
-                    let chunks = Layout::default()
-                        .direction(Direction::Vertical)
-                        .constraints(
-                            [
-                                Constraint::Length(10),
-                                Constraint::Length(3),
-                                Constraint::Min(7),
-                                Constraint::Length(2),
-                            ]
-                            .as_ref(),
-                        )
-                        .split(rect.size());
+            terminal.draw(|rect| {
+                let chunks = Layout::default()
+                    .direction(Direction::Vertical)
+                    .constraints(
+                        [
+                            Constraint::Length(10),
+                            Constraint::Length(3),
+                            Constraint::Min(7),
+                            Constraint::Length(2),
+                        ]
+                        .as_ref(),
+                    )
+                    .split(rect.size());
 
-                    let (list, state) = ui.services.render(ui.state == State::SelectService);
-                    rect.render_stateful_widget(list, chunks[0], state);
-                    rect.render_widget(ui.repo.render(ui.state == State::EditRepo), chunks[1]);
-                    let (list, state) = ui.tags.render(ui.state == State::SelectTag);
-                    let more_chunks = Layout::default()
-                        .direction(Direction::Horizontal)
-                        .constraints([Constraint::Min(15), Constraint::Length(28)].as_ref())
-                        .split(chunks[2]);
-                    rect.render_stateful_widget(list, more_chunks[0], state);
-                    rect.render_widget(ui.details.render(), more_chunks[1]);
-                    rect.render_widget(ui.info.render(), chunks[3]);
-                })
-                .unwrap();
+                let (list, state) = ui.services.render(ui.state == State::SelectService);
+                rect.render_stateful_widget(list, chunks[0], state);
+                rect.render_widget(ui.repo.render(ui.state == State::EditRepo), chunks[1]);
+                let (list, state) = ui.tags.render(ui.state == State::SelectTag);
+                let more_chunks = Layout::default()
+                    .direction(Direction::Horizontal)
+                    .constraints([Constraint::Min(15), Constraint::Length(28)].as_ref())
+                    .split(chunks[2]);
+                rect.render_stateful_widget(list, more_chunks[0], state);
+                rect.render_widget(ui.details.render(), more_chunks[1]);
+                rect.render_widget(ui.info.render(), chunks[3]);
+            })?;
 
             //handle input
             match receiver.try_recv() {
@@ -219,6 +218,8 @@ impl Ui {
             thread::sleep(std::time::Duration::from_millis(32));
         }
 
-        terminal.clear().unwrap();
+        terminal.clear()?;
+
+        Ok(())
     }
 }

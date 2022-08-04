@@ -19,11 +19,11 @@ pub struct Images {
 }
 
 impl Images {
-    pub fn convert(&self) -> super::Tag {
+    pub fn from_tag(images: &Self) -> super::Tag {
         super::Tag {
-            name: self.tag_name.clone(),
-            last_updated: Some(self.last_updated.clone()),
-            details: self
+            name: images.tag_name.clone(),
+            last_updated: Some(images.last_updated.clone()),
+            details: images
                 .images
                 .iter()
                 .map(|d| super::TagDetails {
@@ -69,7 +69,7 @@ impl DockerHub {
         }
 
         Ok(super::Repo {
-            tags: tags.results.iter().map(|t| t.convert()).collect(),
+            tags: tags.results.iter().map(Images::from_tag).collect(),
             next_page: tags.next_page,
         })
     }

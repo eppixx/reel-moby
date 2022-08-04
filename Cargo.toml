@@ -16,6 +16,8 @@ termion = "1.5"
 regex = "1.5.4"
 lazy_static = "1.4.0"
 structopt = "0.3.23"
+thiserror = "1.0.32"
+anyhow = "1.0.59"
 
 [profile.release]
 lto = "yes"

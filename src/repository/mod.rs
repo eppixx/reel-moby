@@ -1,30 +1,22 @@
 mod dockerhub;
 
-use std::fmt;
-
 use chrono::DateTime;
+use thiserror::Error;
 
 use crate::common::display_duration_ext::DisplayDurationExt;
 use crate::repo;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Error)]
 pub enum Error {
     /// couldn't fetch json with reqwest
+    #[error("Fetching error: {0}")]
     Fetching(String),
     /// a serde error
+    #[error("Converting error: {0}")]
     Converting(String),
     /// invalid repos show a valid json with 0 tags
+    #[error("Given Repo does not exists or has 0 tags.")]
     NoTagsFound,
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Error::Fetching(s) => write!(f, "Fetching error: {}", s),
-            Error::Converting(s) => write!(f, "Converting error: {}", s),
-            Error::NoTagsFound => write!(f, "Given Repo has 0 tags. Is it valid?"),
-        }
-    }
 }
 
 #[derive(Clone, PartialEq)]

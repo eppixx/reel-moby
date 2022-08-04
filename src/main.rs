@@ -1,11 +1,12 @@
-use std::path::PathBuf;
-use structopt::StructOpt;
-
 mod common;
 mod repo;
 mod repository;
 mod ui;
 mod widget;
+
+use anyhow::Result;
+use std::path::PathBuf;
+use structopt::StructOpt;
 
 /// helps you searching or updating tags of your used docker images
 #[derive(StructOpt, Debug)]
@@ -19,8 +20,10 @@ pub struct Opt {
     repo: Option<String>,
 }
 
-fn main() {
+fn main() -> Result<()> {
     //parse parameter
     let opt = Opt::from_args();
-    ui::create_ui(&opt);
+    ui::create_ui(&opt)?;
+
+    Ok(())
 }

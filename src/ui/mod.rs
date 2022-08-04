@@ -1,20 +1,23 @@
 mod default;
 mod no_yaml;
 
-use std::sync::mpsc;
-use std::{io, thread};
-
-use crate::Opt;
+use anyhow::Result;
 use termion::input::TermRead;
 
 use crate::widget::service_switcher;
+use crate::Opt;
 
-pub fn create_ui(opt: &Opt) {
+use std::sync::mpsc;
+use std::{io, thread};
+
+pub fn create_ui(opt: &Opt) -> Result<()> {
     let service_result = service_switcher::ServiceSwitcher::new(&opt.file);
     match service_result {
         None => no_yaml::NoYaml::run(opt),
-        Some(_) => default::Ui::run(opt),
-    }
+        Some(switcher) => default::Ui::run(opt, switcher),
+    }?;
+
+    Ok(())
 }
 
 /// create a thread for catching input and send them to core loop
