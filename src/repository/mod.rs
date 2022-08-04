@@ -85,7 +85,7 @@ impl Repo {
         if registry.unwrap_or_default().is_empty() {
             dockerhub::DockerHub::create_repo(&repo)
         } else {
-            return Err(Error::Converting("This registry is not supported".into()));
+            Err(Error::Converting("This registry is not supported".into()))
         }
     }
 
