@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use crate::repository::Error;
+use crate::error::Error;
 
 #[derive(Deserialize, Debug, Clone)]
 struct ImageDetails {
@@ -53,17 +53,10 @@ impl DockerHub {
 
     /// fetches tag information from a url
     pub fn with_url(url: &str) -> Result<super::Repo, Error> {
-        let response = match reqwest::blocking::get(url) {
-            Ok(result) => result,
-            Err(e) => return Err(Error::Fetching(format!("reqwest error: {}", e))),
-        };
+        let response = reqwest::blocking::get(url)?;
 
         //convert it to json
-        let tags = match response.json::<Self>() {
-            Ok(result) => result,
-            Err(e) => return Err(Error::Converting(format!("invalid json: {}", e))),
-        };
-
+        let tags = response.json::<Self>()?;
         if tags.results.is_empty() {
             return Err(Error::NoTagsFound);
         }

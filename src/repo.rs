@@ -1,21 +1,6 @@
-use std::fmt;
-
 use regex::Regex;
 
-#[derive(Debug, PartialEq)]
-pub enum Error {
-    NoTagFound,
-    MisformedInput,
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Error::NoTagFound => write!(f, "Expected a tag"),
-            Error::MisformedInput => write!(f, "Unexpected input"),
-        }
-    }
-}
+use crate::error::Error;
 
 #[derive(Debug, PartialEq)]
 pub enum Repo {

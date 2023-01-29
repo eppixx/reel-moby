@@ -1,23 +1,10 @@
 mod dockerhub;
 
 use chrono::DateTime;
-use thiserror::Error;
 
 use crate::common::display_duration_ext::DisplayDurationExt;
+use crate::error::Error;
 use crate::repo;
-
-#[derive(Debug, PartialEq, Error)]
-pub enum Error {
-    /// couldn't fetch json with reqwest
-    #[error("Fetching error: {0}")]
-    Fetching(String),
-    /// a serde error
-    #[error("Converting error: {0}")]
-    Converting(String),
-    /// invalid repos show a valid json with 0 tags
-    #[error("Given Repo does not exists or has 0 tags.")]
-    NoTagsFound,
-}
 
 #[derive(Clone, PartialEq)]
 pub struct TagDetails {
@@ -77,7 +64,9 @@ impl Repo {
         if registry.unwrap_or_default().is_empty() {
             dockerhub::DockerHub::create_repo(&repo)
         } else {
-            Err(Error::Converting("This registry is not supported".into()))
+            Err(Error::Converting(
+                "This registry is not supported yet".into(),
+            ))
         }
     }
 
@@ -91,26 +80,23 @@ impl Repo {
     }
 
     pub fn next_page(&self) -> Option<Self> {
-        match &self.next_page {
-            Some(url) => match Self::with_url(url) {
-                Ok(tags) => Some(tags),
-                Err(_) => None,
-            },
-            None => None,
+        if let Some(url) = &self.next_page {
+            match Self::with_url(url) {
+                Ok(tags) => return Some(tags),
+                Err(e) => println!("Encountered error: {e}"),
+            }
         }
+        None
     }
 }
 
 /// checks the repo name and may add a prefix for official images
 pub fn check_repo(name: &str) -> Result<String, Error> {
-    let repo = match repo::split_tag_from_repo(name) {
-        Err(e) => return Err(Error::Converting(format!("{}", e))),
-        Ok((name, _)) => name,
-    };
+    let repo = repo::split_tag_from_repo(name)?;
 
     match repo::split_repo_without_tag(name) {
         Ok(repo::Repo::Project(s)) => Ok(format!("library/{}", s)),
-        Ok(_) => Ok(repo.to_string()),
+        Ok(_) => Ok(repo.0.to_string()),
         Err(e) => Err(Error::Converting(format!("{}", e))),
     }
 }

@@ -1,4 +1,5 @@
 mod common;
+mod error;
 mod repo;
 mod repository;
 mod ui;
