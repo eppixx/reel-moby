@@ -46,13 +46,14 @@ impl Tag {
     }
 }
 
+#[derive(Clone)]
 pub struct Repo {
     tags: Vec<Tag>,
     next_page: Option<String>,
 }
 
 impl Repo {
-    pub fn new(repo: &str) -> Result<Self, Error> {
+    pub async fn new(repo: &str) -> Result<Self, Error> {
         use crate::repo::Repo;
         let (registry, repo) = match crate::repo::split_repo_without_tag(repo) {
             Ok(Repo::WithServer(reg, org, pro)) => (Some(reg), format!("{}/{}", org, pro)),
@@ -62,7 +63,7 @@ impl Repo {
         };
 
         if registry.unwrap_or_default().is_empty() {
-            dockerhub::DockerHub::create_repo(&repo)
+            dockerhub::DockerHub::create_repo(&repo).await
         } else {
             Err(Error::Converting(
                 "This registry is not supported yet".into(),
@@ -70,18 +71,18 @@ impl Repo {
         }
     }
 
-    pub fn with_url(url: &str) -> Result<Self, Error> {
+    pub async fn with_url(url: &str) -> Result<Self, Error> {
         //TODO fix for other registries
-        dockerhub::DockerHub::with_url(url)
+        dockerhub::DockerHub::with_url(url).await
     }
 
     pub fn get_tags(&self) -> &Vec<Tag> {
         &self.tags
     }
 
-    pub fn next_page(&self) -> Option<Self> {
+    pub async fn next_page(&self) -> Option<Self> {
         if let Some(url) = &self.next_page {
-            match Self::with_url(url) {
+            match Self::with_url(url).await {
                 Ok(tags) => return Some(tags),
                 Err(e) => println!("Encountered error: {e}"),
             }

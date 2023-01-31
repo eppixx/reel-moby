@@ -22,6 +22,7 @@ impl fmt::Display for Error {
     }
 }
 
+#[derive(Clone)]
 enum Line {
     Status(String),
     Image(repository::Tag),
@@ -38,6 +39,7 @@ impl fmt::Display for Line {
     }
 }
 
+#[derive(Clone)]
 pub struct TagList {
     lines: Vec<Line>,
     state: ListState,
@@ -55,22 +57,22 @@ impl TagList {
     }
 
     /// list the tags of the repository if the input is valid
-    pub fn with_repo_name(repo: String) -> Self {
-        match repository::Repo::new(&repo) {
-            Ok(tags) => Self::with_tags(tags),
+    pub async fn with_repo_name(repo: String) -> Self {
+        match repository::Repo::new(&repo).await {
+            Ok(tags) => Self::with_tags(tags).await,
             Err(_) => Self::with_status("input repo was not found"),
         }
     }
 
     /// list the tags of the input
-    fn with_tags(mut tags: repository::Repo) -> Self {
+    async fn with_tags(mut tags: repository::Repo) -> Self {
         let mut lines: Vec<Line> = tags
             .get_tags()
             .iter()
             .map(|r| Line::Image(r.clone()))
             .collect();
 
-        match tags.next_page() {
+        match tags.next_page().await {
             None => (),
             Some(new_tags) => {
                 lines.push(Line::NextPage(String::from("load more tags")));
@@ -128,20 +130,20 @@ impl TagList {
         }
     }
 
-    pub fn handle_input(&mut self, key: termion::event::Key) {
+    pub async fn handle_input(&mut self, key: termion::event::Key) {
         match key {
-            Key::Down => self.next(),
+            Key::Down => self.next().await,
             Key::Up => self.previous(),
-            Key::Char('\n') => self.select(),
+            Key::Char('\n') => self.select().await,
             _ => (),
         }
     }
 
     /// loads new tags when matching line is selected
-    fn select(&mut self) {
+    async fn select(&mut self) {
         if let Some(i) = self.state.selected() {
             if let Line::NextPage(_) = &self.lines[i] {
-                self.load_next_page()
+                self.load_next_page().await
             }
         }
     }
@@ -152,18 +154,15 @@ impl TagList {
             Some(i) => match &self.lines[i] {
                 Line::Status(_) => Err(Error::SelectedStatus),
                 Line::Image(i) => Ok(i.get_name().to_string()),
-                Line::NextPage(_) => {
-                    self.load_next_page();
-                    Err(Error::NextPageSelected)
-                }
+                Line::NextPage(_) => Err(Error::NextPageSelected),
             },
         }
     }
 
     /// load new tags from the next page
-    fn load_next_page(&mut self) {
+    async fn load_next_page(&mut self) {
         match &self.tags {
-            Some(tags) => match tags.next_page() {
+            Some(tags) => match tags.next_page().await {
                 None => (),
                 Some(new_tags) => {
                     //load new tags object
@@ -183,7 +182,7 @@ impl TagList {
                     }
 
                     //readd next page
-                    match self.tags.as_ref().unwrap().next_page() {
+                    match self.tags.as_ref().unwrap().next_page().await {
                         None => (),
                         Some(_) => self.lines.push(next_page.unwrap()),
                     }
@@ -194,21 +193,26 @@ impl TagList {
     }
 
     /// select next tag
-    fn next(&mut self) {
+    async fn next(&mut self) {
+        if let Some(Line::Status(_)) = self.lines.get(0) {
+            return;
+        }
         match self.state.selected() {
             None if !self.lines.is_empty() => self.state.select(Some(0)),
             None => (),
-            Some(i) if i == self.lines.len() - 1 => self.state.select(Some(0)),
+            Some(i) if i == self.lines.len() - 2 => self.load_next_page().await,
             Some(i) => self.state.select(Some(i + 1)),
         }
     }
 
     /// select previous tag
     fn previous(&mut self) {
+        if let Some(Line::Status(_)) = self.lines.get(0) {
+            return;
+        }
         match self.state.selected() {
-            None if !self.lines.is_empty() => self.state.select(Some(self.lines.len())),
-            None => (),
-            Some(i) if i == 0 => self.state.select(Some(self.lines.len() - 1)),
+            None => self.state.select(Some(0)),
+            Some(i) if i == 0 => self.state.select(Some(self.lines.len() - 2)),
             Some(i) => self.state.select(Some(i - 1)),
         }
     }

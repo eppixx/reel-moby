@@ -46,17 +46,17 @@ pub struct DockerHub {
 
 impl DockerHub {
     /// fetches tag information with a repository name in the form of organization/repository or library/repository in the case of official images from docker
-    pub fn create_repo(repo: &str) -> Result<super::Repo, Error> {
+    pub async fn create_repo(repo: &str) -> Result<super::Repo, Error> {
         let request = format!("https://hub.docker.com/v2/repositories/{}/tags", repo);
-        Self::with_url(&request)
+        Self::with_url(&request).await
     }
 
     /// fetches tag information from a url
-    pub fn with_url(url: &str) -> Result<super::Repo, Error> {
-        let response = reqwest::blocking::get(url)?;
+    pub async fn with_url(url: &str) -> Result<super::Repo, Error> {
+        let response = reqwest::get(url).await?;
 
         //convert it to json
-        let tags = response.json::<Self>()?;
+        let tags = response.json::<Self>().await?;
         if tags.results.is_empty() {
             return Err(Error::NoTagsFound);
         }

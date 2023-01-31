@@ -1,5 +1,5 @@
-mod default;
-mod no_yaml;
+mod no_yaml_found;
+mod yaml_found;
 
 use anyhow::Result;
 use termion::input::TermRead;
@@ -13,8 +13,8 @@ use std::{io, thread};
 pub fn create_ui(opt: &Opt) -> Result<()> {
     let service_result = service_switcher::ServiceSwitcher::new(&opt.file);
     match service_result {
-        None => no_yaml::NoYaml::run(opt),
-        Some(switcher) => default::Ui::run(opt, switcher),
+        Some(switcher) => yaml_found::Ui::run(opt, switcher),
+        _ => no_yaml_found::Ui::run(opt),
     }?;
 
     Ok(())

@@ -12,7 +12,7 @@ pub struct RepoEntry {
 
 impl RepoEntry {
     pub fn new(text: Option<&str>) -> Self {
-        let default_text = "enter a repository here or select one from file widget";
+        let default_text = "edit me or select a repository";
         Self {
             text: String::from(text.unwrap_or(default_text)),
             old_text: String::from(text.unwrap_or(default_text)),
