@@ -144,8 +144,8 @@ mod tests {
             ("  image: nginx", Ok(("  image: ", "nginx"))),
             ("  image: library/nginx", Ok(("  image: ", "library/nginx"))),
             (
-                "  image: gchr.io/library/nginx",
-                Ok(("  image: ", "gchr.io/library/nginx")),
+                "  image: ghcr.io/library/nginx",
+                Ok(("  image: ", "ghcr.io/library/nginx")),
             ),
             ("  image: nginx # comment", Ok(("  image: ", "nginx"))),
             ("  image: test-hyphen", Ok(("  image: ", "test-hyphen"))),
