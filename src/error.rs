@@ -2,9 +2,11 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum Error {
+    /// no valid tag found
     #[error("Expected a tag")]
     NoTagFound,
 
+    /// input that can't be interpreted
     #[error("Unexpected input")]
     MisformedInput,
 
