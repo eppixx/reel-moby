@@ -78,15 +78,14 @@ impl Ui {
                 Ok(UiEvent::TagInput(key)) => {
                     let (fetch_new, mut tags) = {
                         let mut ui_data = ui.lock().unwrap();
-                        let fetch_new = if (key == Key::Down || key == Key::Char('j'))
+                        if (key == Key::Down || key == Key::Char('j'))
                             && ui_data.tags.at_end_of_list()
                         {
                             ui_data.info.set_text("Fetching more tags...");
-                            true
+                            (true, ui_data.tags.clone())
                         } else {
-                            false
-                        };
-                        (fetch_new, ui_data.tags.clone())
+                            (false, ui_data.tags.clone())
+                        }
                     };
                     tags.handle_input(key).await;
                     let mut ui = ui.lock().unwrap();
