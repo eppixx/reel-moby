@@ -69,21 +69,32 @@ impl Ui {
                 Ok(UiEvent::NewRepo(name)) => {
                     {
                         let mut ui = ui.lock().unwrap();
-                        ui.tags = TagList::with_status("fetching new tags...");
+                        ui.tags = TagList::with_status("Fetching new tags...");
                     }
                     let list = TagList::with_repo_name(name).await;
                     let mut ui = ui.lock().unwrap();
                     ui.tags = list;
                 }
                 Ok(UiEvent::TagInput(key)) => {
-                    let mut tags = {
-                        let ui_data = ui.lock().unwrap();
-                        ui_data.tags.clone()
+                    let (fetch_new, mut tags) = {
+                        let mut ui_data = ui.lock().unwrap();
+                        let fetch_new = if (key == Key::Down || key == Key::Char('j'))
+                            && ui_data.tags.at_end_of_list()
+                        {
+                            ui_data.info.set_text("Fetching more tags...");
+                            true
+                        } else {
+                            false
+                        };
+                        (fetch_new, ui_data.tags.clone())
                     };
                     tags.handle_input(key).await;
                     let mut ui = ui.lock().unwrap();
                     ui.tags = tags;
                     ui.details = ui.tags.create_detail_widget();
+                    if fetch_new {
+                        ui.info.set_text("Fetching tags done");
+                    }
                 }
                 Err(e) => {
                     let mut ui = ui.lock().unwrap();

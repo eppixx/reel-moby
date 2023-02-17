@@ -87,6 +87,13 @@ impl TagList {
         }
     }
 
+    pub fn at_end_of_list(&self) -> bool {
+        if let Some(i) = self.state.selected() {
+            return i == self.lines.len() - 2;
+        }
+        false
+    }
+
     pub fn render(&mut self, colored: bool) -> (List, &mut ListState) {
         let border_style = if colored {
             Style::default().fg(Color::Green)
