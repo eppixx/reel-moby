@@ -8,7 +8,7 @@ use tui::Terminal;
 use std::sync::{Arc, Mutex};
 use std::{io, thread};
 
-use crate::widget::async_tag_list;
+use crate::widget::async_tag_list::{self, TagList};
 use crate::widget::info;
 use crate::widget::repo_entry;
 use crate::Opt;
@@ -61,18 +61,33 @@ impl Ui {
             match event.recv() {
                 Ok(UiEvent::Quit) => break,
                 Ok(UiEvent::NewRepo(name)) => {
+                    {
+                        let mut ui = ui.lock().unwrap();
+                        ui.tags = TagList::with_status("fetching new tags...");
+                    }
                     let list = async_tag_list::TagList::with_repo_name(name).await;
                     let mut ui = ui.lock().unwrap();
                     ui.tags = list;
                 }
                 Ok(UiEvent::TagInput(key)) => {
-                    let mut tags = {
-                        let ui_data = ui.lock().unwrap();
-                        ui_data.tags.clone()
+                    let (fetch_new, mut tags) = {
+                        let mut ui_data = ui.lock().unwrap();
+                        if (key == Key::Down || key == Key::Char('j'))
+                            && ui_data.tags.at_end_of_list()
+                        {
+                            ui_data.info.set_text("Fetching more tags...");
+                            (true, ui_data.tags.clone())
+                        } else {
+                            (false, ui_data.tags.clone())
+                        }
                     };
                     tags.handle_input(key).await;
                     let mut ui = ui.lock().unwrap();
                     ui.tags = tags;
+                    ui.details = ui.tags.create_detail_widget();
+                    if fetch_new {
+                        ui.info.set_text("Fetching tags done");
+                    }
                 }
                 Err(e) => {
                     let mut ui = ui.lock().unwrap();
@@ -154,59 +169,25 @@ impl Ui {
                     ui_data.repo.confirm();
                     sender.send(UiEvent::NewRepo(ui_data.repo.get())).unwrap();
                 }
-                Ok(Key::Char('\n')) => match ui_data.state {
-                    State::EditRepo => {
-                        ui_data.repo.confirm();
-                        sender.send(UiEvent::NewRepo(ui_data.repo.get())).unwrap();
-                    }
-                    State::SelectTag => {} // {
-                                           //     let mut repo = ui_data.repo.get();
-                                           //     let tag = match ui_data.tags.get_selected() {
-                                           //         Err(async_tag_list::Error::NextPageSelected) => continue,
-                                           //         Err(e) => {
-                                           //             ui_data.info.set_info(&format!("{}", e));
-                                           //             continue;
-                                           //         }
-                                           //         Ok(tag) => tag,
-                                           //     };
-                                           //     repo.push(':');
-                                           //     repo.push_str(&tag);
-                                           //     ui_data.services.change_current_line(repo);
-                                           // }
-                },
-                Ok(Key::Char(key)) => match ui_data.state {
-                    State::EditRepo => {
-                        ui_data.info.set_text("Editing Repository");
-                        ui_data.repo.handle_input(Key::Char(key));
-                    }
-                    State::SelectTag => {}
-                },
-                Ok(Key::Backspace) => match ui_data.state {
-                    State::EditRepo => {
-                        ui_data.info.set_text("Editing Repository");
-                        ui_data.repo.handle_input(Key::Backspace);
-                    }
-                    State::SelectTag => {}
-                },
-                Ok(Key::Up) => {
-                    let state = ui_data.state.clone();
-                    match state {
-                        State::EditRepo => {}
-                        State::SelectTag => {
-                            sender.send(UiEvent::TagInput(Key::Up)).unwrap();
-                            ui_data.details = ui_data.tags.create_detail_widget();
-                        }
-                    }
+                Ok(Key::Char('\n')) if ui_data.state == State::EditRepo => {
+                    ui_data.repo.confirm();
+                    sender.send(UiEvent::NewRepo(ui_data.repo.get())).unwrap();
                 }
-                Ok(Key::Down) => {
-                    let state = ui_data.state.clone();
-                    match state {
-                        State::EditRepo => {}
-                        State::SelectTag => {
-                            sender.send(UiEvent::TagInput(Key::Down)).unwrap();
-                            ui_data.details = ui_data.tags.create_detail_widget();
-                        }
-                    }
+                Ok(Key::Backspace) if ui_data.state == State::EditRepo => {
+                    ui_data.info.set_text("Editing Repository");
+                    ui_data.repo.handle_input(Key::Backspace);
+                }
+                Ok(Key::Up) | Ok(Key::Char('k')) if ui_data.state == State::SelectTag => {
+                    sender.send(UiEvent::TagInput(Key::Up)).unwrap();
+                    ui_data.details = ui_data.tags.create_detail_widget();
+                }
+                Ok(Key::Down) | Ok(Key::Char('j')) if ui_data.state == State::SelectTag => {
+                    sender.send(UiEvent::TagInput(Key::Down)).unwrap();
+                    ui_data.details = ui_data.tags.create_detail_widget();
+                }
+                Ok(Key::Char(key)) if ui_data.state == State::EditRepo => {
+                    ui_data.info.set_text("Editing Repository");
+                    ui_data.repo.handle_input(Key::Char(key));
                 }
                 _ => {}
             }

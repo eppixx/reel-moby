@@ -212,14 +212,10 @@ impl Ui {
                     ui_data.repo.confirm();
                     sender.send(UiEvent::NewRepo(ui_data.repo.get())).unwrap();
                 }
-                Ok(Key::Backspace) => match ui_data.state {
-                    State::SelectService => (),
-                    State::EditRepo => {
-                        ui_data.info.set_text("Editing Repository");
-                        ui_data.repo.handle_input(Key::Backspace);
-                    }
-                    State::SelectTag => (),
-                },
+                Ok(Key::Backspace) if ui_data.state == State::EditRepo => {
+                    ui_data.info.set_text("Editing Repository");
+                    ui_data.repo.handle_input(Key::Backspace);
+                }
                 Ok(Key::Up) | Ok(Key::Char('k'))
                     if ui_data.state == State::SelectService
                         && ui_data.services.find_previous_match() =>
