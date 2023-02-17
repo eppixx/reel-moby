@@ -1,6 +1,5 @@
 use std::fmt;
 
-use termion::event::Key;
 use tui::style::{Color, Style};
 use tui::widgets::{Block, Borders, List, ListState};
 
@@ -137,24 +136,6 @@ impl TagList {
         }
     }
 
-    pub async fn handle_input(&mut self, key: termion::event::Key) {
-        match key {
-            Key::Down => self.next().await,
-            Key::Up => self.previous(),
-            Key::Char('\n') => self.select().await,
-            _ => (),
-        }
-    }
-
-    /// loads new tags when matching line is selected
-    async fn select(&mut self) {
-        if let Some(i) = self.state.selected() {
-            if let Line::NextPage(_) = &self.lines[i] {
-                self.load_next_page().await
-            }
-        }
-    }
-
     pub fn get_selected(&mut self) -> Result<String, Error> {
         match self.state.selected() {
             None => Err(Error::NoneSelected),
@@ -167,7 +148,7 @@ impl TagList {
     }
 
     /// load new tags from the next page
-    async fn load_next_page(&mut self) {
+    pub async fn load_next_page(&mut self) {
         match &self.tags {
             Some(tags) => match tags.next_page().await {
                 None => (),
@@ -200,7 +181,7 @@ impl TagList {
     }
 
     /// select next tag
-    async fn next(&mut self) {
+    pub async fn next(&mut self) {
         if let Some(Line::Status(_)) = self.lines.get(0) {
             return;
         }
@@ -213,7 +194,7 @@ impl TagList {
     }
 
     /// select previous tag
-    fn previous(&mut self) {
+    pub fn previous(&mut self) {
         if let Some(Line::Status(_)) = self.lines.get(0) {
             return;
         }

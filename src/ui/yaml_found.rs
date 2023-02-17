@@ -56,7 +56,8 @@ impl std::iter::Iterator for State {
 
 pub enum UiEvent {
     NewRepo(String),
-    TagInput(termion::event::Key),
+    TagPrevious,
+    TagNext,
     Quit,
 }
 
@@ -75,23 +76,25 @@ impl Ui {
                     let mut ui = ui.lock().unwrap();
                     ui.tags = list;
                 }
-                Ok(UiEvent::TagInput(key)) => {
-                    let (fetch_new, mut tags) = {
-                        let mut ui_data = ui.lock().unwrap();
-                        if (key == Key::Down || key == Key::Char('j'))
-                            && ui_data.tags.at_end_of_list()
-                        {
-                            ui_data.info.set_text("Fetching more tags...");
-                            (true, ui_data.tags.clone())
+                Ok(UiEvent::TagPrevious) => {
+                    let mut ui = ui.lock().unwrap();
+                    ui.tags.previous();
+                }
+                Ok(UiEvent::TagNext) => {
+                    let (fetched_new_tags, mut tags) = {
+                        let mut ui = ui.lock().unwrap();
+                        if ui.tags.at_end_of_list() {
+                            ui.info.set_text("Fetching more tags...");
+                            (true, ui.tags.clone())
                         } else {
-                            (false, ui_data.tags.clone())
+                            (false, ui.tags.clone())
                         }
                     };
-                    tags.handle_input(key).await;
+                    tags.next().await;
                     let mut ui = ui.lock().unwrap();
                     ui.tags = tags;
                     ui.details = ui.tags.create_detail_widget();
-                    if fetch_new {
+                    if fetched_new_tags {
                         ui.info.set_text("Fetching tags done");
                     }
                 }
@@ -255,10 +258,10 @@ impl Ui {
                     }
                 }
                 Ok(Key::Up) | Ok(Key::Char('k')) if ui_data.state == State::SelectTag => {
-                    sender.send(UiEvent::TagInput(Key::Up)).unwrap();
+                    sender.send(UiEvent::TagPrevious).unwrap();
                 }
                 Ok(Key::Down) | Ok(Key::Char('j')) if ui_data.state == State::SelectTag => {
-                    sender.send(UiEvent::TagInput(Key::Down)).unwrap();
+                    sender.send(UiEvent::TagNext).unwrap();
                 }
                 Ok(Key::Char(key)) if ui_data.state == State::EditRepo => {
                     ui_data.info.set_text("Editing Repository");
