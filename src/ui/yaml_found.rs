@@ -9,7 +9,7 @@ use std::sync::{Arc, Mutex};
 use std::{io, thread};
 
 use crate::repository;
-use crate::widget::async_tag_list;
+use crate::widget::async_tag_list::{self, TagList};
 use crate::widget::info;
 use crate::widget::repo_entry;
 use crate::widget::service_switcher;
@@ -18,7 +18,7 @@ use crate::Opt;
 pub struct Ui {
     state: State,
     repo: repo_entry::RepoEntry,
-    tags: async_tag_list::TagList,
+    tags: TagList,
     services: service_switcher::ServiceSwitcher,
     details: crate::widget::details::Details,
     info: info::Info,
@@ -67,7 +67,11 @@ impl Ui {
             match event.recv() {
                 Ok(UiEvent::Quit) => break,
                 Ok(UiEvent::NewRepo(name)) => {
-                    let list = async_tag_list::TagList::with_repo_name(name).await;
+                    {
+                        let mut ui = ui.lock().unwrap();
+                        ui.tags = TagList::with_status("fetching new tags...");
+                    }
+                    let list = TagList::with_repo_name(name).await;
                     let mut ui = ui.lock().unwrap();
                     ui.tags = list;
                 }
@@ -79,6 +83,7 @@ impl Ui {
                     tags.handle_input(key).await;
                     let mut ui = ui.lock().unwrap();
                     ui.tags = tags;
+                    ui.details = ui.tags.create_detail_widget();
                 }
                 Err(e) => {
                     let mut ui = ui.lock().unwrap();
@@ -94,7 +99,7 @@ impl Ui {
         let ui = Arc::new(Mutex::new(Ui {
             state: State::SelectService,
             repo: repo_entry::RepoEntry::new(repo_id),
-            tags: async_tag_list::TagList::with_status("no tags"),
+            tags: TagList::with_status("no tags"),
             services: switcher,
             details: crate::widget::details::Details::new(),
             info: info::Info::new("Select image or edit Repository"),
@@ -179,35 +184,24 @@ impl Ui {
                     ui_data.repo.confirm();
                     sender.send(UiEvent::NewRepo(ui_data.repo.get())).unwrap();
                 }
-                Ok(Key::Char('\n')) => match ui_data.state {
-                    State::EditRepo => {
-                        ui_data.repo.confirm();
-                        sender.send(UiEvent::NewRepo(ui_data.repo.get())).unwrap();
-                    }
-                    State::SelectTag => {
-                        let mut repo = ui_data.repo.get();
-                        let tag = match ui_data.tags.get_selected() {
-                            Err(async_tag_list::Error::NextPageSelected) => continue,
-                            Err(e) => {
-                                ui_data.info.set_info(&format!("{}", e));
-                                continue;
-                            }
-                            Ok(tag) => tag,
-                        };
-                        repo.push(':');
-                        repo.push_str(&tag);
-                        ui_data.services.change_current_line(repo);
-                    }
-                    _ => (),
-                },
-                Ok(Key::Char(key)) => match ui_data.state {
-                    State::SelectService => (),
-                    State::EditRepo => {
-                        ui_data.info.set_text("Editing Repository");
-                        ui_data.repo.handle_input(Key::Char(key));
-                    }
-                    State::SelectTag => (),
-                },
+                Ok(Key::Char('\n')) if ui_data.state == State::SelectTag => {
+                    let mut repo = ui_data.repo.get();
+                    let tag = match ui_data.tags.get_selected() {
+                        Err(async_tag_list::Error::NextPageSelected) => continue,
+                        Err(e) => {
+                            ui_data.info.set_info(&format!("{}", e));
+                            continue;
+                        }
+                        Ok(tag) => tag,
+                    };
+                    repo.push(':');
+                    repo.push_str(&tag);
+                    ui_data.services.change_current_line(repo);
+                }
+                Ok(Key::Char('\n')) if ui_data.state == State::EditRepo => {
+                    ui_data.repo.confirm();
+                    sender.send(UiEvent::NewRepo(ui_data.repo.get())).unwrap();
+                }
                 Ok(Key::Backspace) => match ui_data.state {
                     State::SelectService => (),
                     State::EditRepo => {
@@ -216,58 +210,53 @@ impl Ui {
                     }
                     State::SelectTag => (),
                 },
-                Ok(Key::Up) => {
-                    let state = ui_data.state.clone();
-                    match state {
-                        State::SelectService if ui_data.services.find_previous_match() => {
-                            match ui_data.services.extract_repo() {
-                                Err(e) => ui_data.info.set_info(&format!("{}", e)),
-                                Ok(s) => {
-                                    let repo = match repository::check_repo(&s) {
-                                        Err(e) => {
-                                            ui_data.info.set_info(&format!("{}", e));
-                                            continue;
-                                        }
-                                        Ok(s) => s,
-                                    };
-                                    ui_data.repo.set(repo.to_string());
-                                    sender.send(UiEvent::NewRepo(ui_data.repo.get())).unwrap();
+                Ok(Key::Up) | Ok(Key::Char('k'))
+                    if ui_data.state == State::SelectService
+                        && ui_data.services.find_previous_match() =>
+                {
+                    match ui_data.services.extract_repo() {
+                        Err(e) => ui_data.info.set_info(&format!("{}", e)),
+                        Ok(s) => {
+                            let repo = match repository::check_repo(&s) {
+                                Err(e) => {
+                                    ui_data.info.set_info(&format!("{}", e));
+                                    continue;
                                 }
-                            }
-                        }
-                        State::SelectService | State::EditRepo => (),
-                        State::SelectTag => {
-                            sender.send(UiEvent::TagInput(Key::Up)).unwrap();
-                            ui_data.details = ui_data.tags.create_detail_widget();
+                                Ok(s) => s,
+                            };
+                            ui_data.repo.set(repo.to_string());
+                            sender.send(UiEvent::NewRepo(ui_data.repo.get())).unwrap();
                         }
                     }
                 }
-                Ok(Key::Down) => {
-                    let state = ui_data.state.clone();
-                    match state {
-                        State::SelectService if ui_data.services.find_next_match() => {
-                            match ui_data.services.extract_repo() {
-                                Err(e) => ui_data.info.set_info(&format!("{}", e)),
-                                Ok(s) => {
-                                    let repo = match repository::check_repo(&s) {
-                                        Err(e) => {
-                                            ui_data.info.set_info(&format!("{}", e));
-                                            continue;
-                                        }
-                                        Ok(s) => s,
-                                    };
-                                    ui_data.repo.set(repo.to_string());
-                                    sender.send(UiEvent::NewRepo(ui_data.repo.get())).unwrap();
+                Ok(Key::Down) | Ok(Key::Char('j'))
+                    if ui_data.state == State::SelectService
+                        && ui_data.services.find_next_match() =>
+                {
+                    match ui_data.services.extract_repo() {
+                        Err(e) => ui_data.info.set_info(&format!("{}", e)),
+                        Ok(s) => {
+                            let repo = match repository::check_repo(&s) {
+                                Err(e) => {
+                                    ui_data.info.set_info(&format!("{}", e));
+                                    continue;
                                 }
-                            }
-                        }
-                        State::SelectService => (),
-                        State::EditRepo => (),
-                        State::SelectTag => {
-                            sender.send(UiEvent::TagInput(Key::Down)).unwrap();
-                            ui_data.details = ui_data.tags.create_detail_widget();
+                                Ok(s) => s,
+                            };
+                            ui_data.repo.set(repo.to_string());
+                            sender.send(UiEvent::NewRepo(ui_data.repo.get())).unwrap();
                         }
                     }
+                }
+                Ok(Key::Up) | Ok(Key::Char('k')) if ui_data.state == State::SelectTag => {
+                    sender.send(UiEvent::TagInput(Key::Up)).unwrap();
+                }
+                Ok(Key::Down) | Ok(Key::Char('j')) if ui_data.state == State::SelectTag => {
+                    sender.send(UiEvent::TagInput(Key::Down)).unwrap();
+                }
+                Ok(Key::Char(key)) if ui_data.state == State::EditRepo => {
+                    ui_data.info.set_text("Editing Repository");
+                    ui_data.repo.handle_input(Key::Char(key));
                 }
                 _ => (),
             }
