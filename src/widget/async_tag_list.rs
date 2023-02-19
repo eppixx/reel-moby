@@ -169,10 +169,9 @@ impl TagList {
                         }
                     }
 
-                    //readd next page
-                    match self.tags.as_ref().unwrap().next_page().await {
-                        None => (),
-                        Some(_) => self.lines.push(next_page.unwrap()),
+                    //readd next page item
+                    if let Some(_) = self.tags.as_ref().unwrap().next_page().await {
+                        self.lines.push(next_page.unwrap());
                     }
                 }
             },
