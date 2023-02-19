@@ -73,6 +73,7 @@ impl Ui {
                 Ok(UiEvent::TagPrevious) => {
                     let mut ui = ui.lock().unwrap();
                     ui.tags.previous();
+                    ui.details = ui.tags.create_detail_widget();
                 }
                 Ok(UiEvent::TagNext) => {
                     let (fetched_new_tags, mut tags) = {
