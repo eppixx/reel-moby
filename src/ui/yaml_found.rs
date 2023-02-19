@@ -8,13 +8,12 @@ use tui::Terminal;
 
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
-use std::{io, thread};
 
+use super::UiEvent;
+use crate::error::Error;
 use crate::repository;
 use crate::widget::async_tag_list::{self, TagList};
-use crate::widget::info;
-use crate::widget::repo_entry;
-use crate::widget::service_switcher;
+use crate::widget::{info, repo_entry, service_switcher};
 use crate::Opt;
 
 pub struct Ui {
@@ -56,11 +55,6 @@ impl std::iter::Iterator for State {
     }
 }
 
-pub enum UiEvent {
-    Input(Key),
-    RefreshOnNewData,
-}
-
 pub enum DeferredEvent {
     Quit,
     NewRepo(String),
@@ -69,22 +63,21 @@ pub enum DeferredEvent {
 }
 
 impl Ui {
-    /// create a thread for catching input and send them to core loop
-    pub fn spawn_input_channel(sender: mpsc::Sender<UiEvent>) {
-        thread::spawn(move || loop {
-            let stdin = io::stdin();
-            for c in stdin.keys() {
-                sender.send(UiEvent::Input(c.unwrap())).unwrap();
-            }
-        });
+    /// catch input and send them to core loop
+    pub fn wait_for_input(sender: mpsc::Sender<UiEvent>) -> Result<(), Error> {
+        let stdin = std::io::stdin();
+        for c in stdin.keys() {
+            sender.send(UiEvent::Input(c.unwrap()))?;
+        }
+        Ok(())
     }
 
     #[tokio::main]
     pub async fn work_requests(
-        ui: Arc<Mutex<Ui>>,
+        ui: &Arc<Mutex<Ui>>,
         events: mpsc::Receiver<DeferredEvent>,
         sender: mpsc::Sender<UiEvent>,
-    ) {
+    ) -> Result<(), Error> {
         loop {
             match events.recv() {
                 Ok(DeferredEvent::Quit) => break,
@@ -92,7 +85,7 @@ impl Ui {
                     {
                         let mut ui = ui.lock().unwrap();
                         ui.tags = TagList::with_status("Fetching new tags...");
-                        sender.send(UiEvent::RefreshOnNewData).unwrap();
+                        sender.send(UiEvent::RefreshOnNewData)?;
                     }
                     let list = TagList::with_repo_name(name).await;
                     let mut ui = ui.lock().unwrap();
@@ -108,7 +101,7 @@ impl Ui {
                         let mut ui = ui.lock().unwrap();
                         if ui.tags.at_end_of_list() {
                             ui.info.set_text("Fetching more tags...");
-                            sender.send(UiEvent::RefreshOnNewData).unwrap();
+                            sender.send(UiEvent::RefreshOnNewData)?;
                             (true, ui.tags.clone())
                         } else {
                             (false, ui.tags.clone())
@@ -127,8 +120,9 @@ impl Ui {
                     ui.info.set_info(&e);
                 }
             };
-            sender.send(UiEvent::RefreshOnNewData).unwrap();
+            sender.send(UiEvent::RefreshOnNewData)?;
         }
+        Ok(())
     }
 
     pub fn run(opt: &Opt, switcher: service_switcher::ServiceSwitcher) -> Result<()> {
@@ -149,16 +143,25 @@ impl Ui {
         let ui_clone = ui.clone();
         let sender2 = sender.clone();
         std::thread::spawn(move || {
-            Self::work_requests(ui_clone, deferred_receiver, sender2);
+            if let Err(e) = Self::work_requests(&ui_clone, deferred_receiver, sender2) {
+                let mut ui = ui_clone.lock().unwrap();
+                ui.info.set_info(&e);
+            }
         });
 
         //setup tui
-        let stdout = io::stdout().into_raw_mode()?;
+        let stdout = std::io::stdout().into_raw_mode()?;
         let backend = TermionBackend::new(stdout);
         let mut terminal = Terminal::new(backend)?;
 
         //setup input thread
-        Self::spawn_input_channel(sender);
+        let ui_clone = ui.clone();
+        std::thread::spawn(move || {
+            if let Err(e) = Self::wait_for_input(sender) {
+                let mut ui = ui_clone.lock().unwrap();
+                ui.info.set_info(&e);
+            }
+        });
 
         //core interaction loop
         'core: loop {
@@ -208,111 +211,122 @@ impl Ui {
             let event = receiver.recv();
             let mut ui_data = ui.lock().unwrap();
             match event {
-                Ok(UiEvent::Input(Key::Ctrl('q'))) | Ok(UiEvent::Input(Key::Ctrl('c'))) => {
-                    deferred_sender.send(DeferredEvent::Quit)?;
-                    break 'core; //quit program without saving
-                }
-                Ok(UiEvent::Input(Key::Char('\t'))) => {
-                    ui_data.state.next();
-                    let state = ui_data.state.clone();
-                    ui_data.info.set_info(&state);
-                }
-                Ok(UiEvent::Input(Key::Ctrl('s'))) => match ui_data.services.save() {
-                    Err(e) => {
-                        ui_data.info.set_info(&format!("{}", e));
-                        continue;
+                //handling input
+                Ok(UiEvent::Input(key)) => match key {
+                    //quit without saving
+                    Key::Ctrl('q') | Key::Ctrl('c') => {
+                        deferred_sender.send(DeferredEvent::Quit)?;
+                        break 'core; //quit program without saving
                     }
-                    Ok(_) => ui_data.info.set_text("Saved compose file"),
-                },
-                Ok(UiEvent::Input(Key::Ctrl('r'))) => {
-                    ui_data.repo.confirm();
-                    deferred_sender
-                        .send(DeferredEvent::NewRepo(ui_data.repo.get()))
-                        .unwrap();
-                }
-                Ok(UiEvent::Input(Key::Char('\n'))) if ui_data.state == State::SelectTag => {
-                    let mut repo = ui_data.repo.get();
-                    let tag = match ui_data.tags.get_selected() {
-                        Err(async_tag_list::Error::NextPageSelected) => continue,
+                    //cycle widgets
+                    Key::Char('\t') => {
+                        ui_data.state.next();
+                        let state = ui_data.state.clone();
+                        ui_data.info.set_info(&state);
+                    }
+                    //save file
+                    Key::Ctrl('s') => match ui_data.services.save() {
                         Err(e) => {
                             ui_data.info.set_info(&format!("{}", e));
                             continue;
                         }
-                        Ok(tag) => tag,
-                    };
-                    repo.push(':');
-                    repo.push_str(&tag);
-                    ui_data.services.change_current_line(repo);
-                }
-                Ok(UiEvent::Input(Key::Char('\n'))) if ui_data.state == State::EditRepo => {
-                    ui_data.repo.confirm();
-                    deferred_sender
-                        .send(DeferredEvent::NewRepo(ui_data.repo.get()))
-                        .unwrap();
-                }
-                Ok(UiEvent::Input(Key::Backspace)) if ui_data.state == State::EditRepo => {
-                    ui_data.info.set_text("Editing Repository");
-                    ui_data.repo.handle_input(Key::Backspace);
-                }
-                Ok(UiEvent::Input(Key::Up)) | Ok(UiEvent::Input(Key::Char('k')))
-                    if ui_data.state == State::SelectService
-                        && ui_data.services.find_previous_match() =>
-                {
-                    match ui_data.services.extract_repo() {
-                        Err(e) => ui_data.info.set_info(&format!("{}", e)),
-                        Ok(s) => {
-                            let repo = match repository::check_repo(&s) {
-                                Err(e) => {
-                                    ui_data.info.set_info(&format!("{}", e));
-                                    continue;
-                                }
-                                Ok(s) => s,
-                            };
-                            ui_data.repo.set(repo.to_string());
-                            deferred_sender
-                                .send(DeferredEvent::NewRepo(ui_data.repo.get()))
-                                .unwrap();
+                        Ok(_) => ui_data.info.set_text("Saved compose file"),
+                    },
+                    //refresh repository
+                    Key::Ctrl('r') => {
+                        ui_data.repo.confirm();
+                        deferred_sender
+                            .send(DeferredEvent::NewRepo(ui_data.repo.get()))
+                            .unwrap();
+                    }
+                    //enter on selecting tags
+                    Key::Char('\n') if ui_data.state == State::SelectTag => {
+                        let mut repo = ui_data.repo.get();
+                        let tag = match ui_data.tags.get_selected() {
+                            Err(async_tag_list::Error::NextPageSelected) => continue,
+                            Err(e) => {
+                                ui_data.info.set_info(&format!("{}", e));
+                                continue;
+                            }
+                            Ok(tag) => tag,
+                        };
+                        repo.push(':');
+                        repo.push_str(&tag);
+                        ui_data.services.change_current_line(repo);
+                    }
+                    //enter on editing repository
+                    Key::Char('\n') if ui_data.state == State::EditRepo => {
+                        ui_data.repo.confirm();
+                        deferred_sender
+                            .send(DeferredEvent::NewRepo(ui_data.repo.get()))
+                            .unwrap();
+                    }
+                    //delete last char on repository
+                    Key::Backspace if ui_data.state == State::EditRepo => {
+                        ui_data.info.set_text("Editing Repository");
+                        ui_data.repo.handle_input(Key::Backspace);
+                    }
+                    //moving up on selecting service
+                    Key::Up | Key::Char('k')
+                        if ui_data.state == State::SelectService
+                            && ui_data.services.find_previous_match() =>
+                    {
+                        match ui_data.services.extract_repo() {
+                            Err(e) => ui_data.info.set_info(&format!("{}", e)),
+                            Ok(s) => {
+                                let repo = match repository::check_repo(&s) {
+                                    Err(e) => {
+                                        ui_data.info.set_info(&format!("{}", e));
+                                        continue;
+                                    }
+                                    Ok(s) => s,
+                                };
+                                ui_data.repo.set(repo.to_string());
+                                deferred_sender
+                                    .send(DeferredEvent::NewRepo(ui_data.repo.get()))
+                                    .unwrap();
+                            }
                         }
                     }
-                }
-                Ok(UiEvent::Input(Key::Down)) | Ok(UiEvent::Input(Key::Char('j')))
-                    if ui_data.state == State::SelectService
-                        && ui_data.services.find_next_match() =>
-                {
-                    match ui_data.services.extract_repo() {
-                        Err(e) => ui_data.info.set_info(&format!("{}", e)),
-                        Ok(s) => {
-                            let repo = match repository::check_repo(&s) {
-                                Err(e) => {
-                                    ui_data.info.set_info(&format!("{}", e));
-                                    continue;
-                                }
-                                Ok(s) => s,
-                            };
-                            ui_data.repo.set(repo.to_string());
-                            deferred_sender
-                                .send(DeferredEvent::NewRepo(ui_data.repo.get()))
-                                .unwrap();
+                    //moving down on selecting service
+                    Key::Down | Key::Char('j')
+                        if ui_data.state == State::SelectService
+                            && ui_data.services.find_next_match() =>
+                    {
+                        match ui_data.services.extract_repo() {
+                            Err(e) => ui_data.info.set_info(&format!("{}", e)),
+                            Ok(s) => {
+                                let repo = match repository::check_repo(&s) {
+                                    Err(e) => {
+                                        ui_data.info.set_info(&format!("{}", e));
+                                        continue;
+                                    }
+                                    Ok(s) => s,
+                                };
+                                ui_data.repo.set(repo.to_string());
+                                deferred_sender
+                                    .send(DeferredEvent::NewRepo(ui_data.repo.get()))
+                                    .unwrap();
+                            }
                         }
                     }
-                }
-                Ok(UiEvent::Input(Key::Up)) | Ok(UiEvent::Input(Key::Char('k')))
-                    if ui_data.state == State::SelectTag =>
-                {
-                    deferred_sender.send(DeferredEvent::TagPrevious).unwrap();
-                }
-                Ok(UiEvent::Input(Key::Down)) | Ok(UiEvent::Input(Key::Char('j')))
-                    if ui_data.state == State::SelectTag =>
-                {
-                    deferred_sender.send(DeferredEvent::TagNext).unwrap();
-                }
-                Ok(UiEvent::Input(Key::Char(key))) if ui_data.state == State::EditRepo => {
-                    ui_data.info.set_text("Editing Repository");
-                    ui_data.repo.handle_input(Key::Char(key));
-                }
-                Ok(UiEvent::Input(_)) => {}
-                Ok(UiEvent::RefreshOnNewData) => {}
-                Err(_) => {}
+                    //moving up on selecting tags
+                    Key::Up | Key::Char('k') if ui_data.state == State::SelectTag => {
+                        deferred_sender.send(DeferredEvent::TagPrevious).unwrap();
+                    }
+                    //moving down on selecting tags
+                    Key::Down | Key::Char('j') if ui_data.state == State::SelectTag => {
+                        deferred_sender.send(DeferredEvent::TagNext).unwrap();
+                    }
+                    //append character on editing repository
+                    Key::Char(key) if ui_data.state == State::EditRepo => {
+                        ui_data.info.set_text("Editing Repository");
+                        ui_data.repo.handle_input(Key::Char(key));
+                    }
+                    //ignore all else input
+                    _ => {}
+                },
+                Ok(UiEvent::RefreshOnNewData) | Err(_) => {}
             }
         }
 

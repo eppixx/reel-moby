@@ -6,6 +6,11 @@ use anyhow::Result;
 use crate::widget::service_switcher;
 use crate::Opt;
 
+pub enum UiEvent {
+    Input(termion::event::Key),
+    RefreshOnNewData,
+}
+
 pub fn create_ui(opt: &Opt) -> Result<()> {
     let service_result = service_switcher::ServiceSwitcher::new(&opt.file);
     match service_result {

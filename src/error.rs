@@ -25,4 +25,8 @@ pub enum Error {
     /// error while handling requests
     #[error("reqwest error: {0}")]
     Reqwest(#[from] reqwest::Error),
+
+    /// error while sending to channel
+    #[error("sending to channel error: {0}")]
+    ChannelSendError(#[from] std::sync::mpsc::SendError<crate::ui::UiEvent>),
 }

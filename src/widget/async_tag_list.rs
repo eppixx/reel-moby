@@ -160,17 +160,14 @@ impl TagList {
                     let next_page = self.lines.pop();
 
                     //add tags
-                    match &self.tags {
-                        None => (),
-                        Some(tags) => {
-                            for image in tags.get_tags().iter() {
-                                self.lines.push(Line::Image(image.clone()));
-                            }
+                    if let Some(tags) = &self.tags {
+                        for image in tags.get_tags().iter() {
+                            self.lines.push(Line::Image(image.clone()));
                         }
                     }
 
                     //readd next page item
-                    if let Some(_) = self.tags.as_ref().unwrap().next_page().await {
+                    if (self.tags.as_ref().unwrap().next_page().await).is_some() {
                         self.lines.push(next_page.unwrap());
                     }
                 }
