@@ -1,10 +1,12 @@
 use anyhow::Result;
 use termion::event::Key;
+use termion::input::TermRead;
 use termion::raw::IntoRawMode;
 use tui::backend::TermionBackend;
 use tui::layout::{Constraint, Direction, Layout};
 use tui::Terminal;
 
+use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::{io, thread};
 
@@ -49,37 +51,58 @@ impl std::iter::Iterator for State {
 }
 
 pub enum UiEvent {
+    Input(Key),
+    RefreshOnNewData,
+}
+
+pub enum DeferredEvent {
+    Quit,
     NewRepo(String),
     TagPrevious,
     TagNext,
-    Quit,
 }
 
 impl Ui {
+    /// create a thread for catching input and send them to core loop
+    pub fn spawn_input_channel(sender: mpsc::Sender<UiEvent>) {
+        thread::spawn(move || loop {
+            let stdin = io::stdin();
+            for c in stdin.keys() {
+                sender.send(UiEvent::Input(c.unwrap())).unwrap();
+            }
+        });
+    }
+
     #[tokio::main]
-    pub async fn work_requests(ui: Arc<Mutex<Ui>>, event: std::sync::mpsc::Receiver<UiEvent>) {
+    pub async fn work_requests(
+        ui: Arc<Mutex<Ui>>,
+        events: mpsc::Receiver<DeferredEvent>,
+        sender: mpsc::Sender<UiEvent>,
+    ) {
         loop {
-            match event.recv() {
-                Ok(UiEvent::Quit) => break,
-                Ok(UiEvent::NewRepo(name)) => {
+            match events.recv() {
+                Ok(DeferredEvent::Quit) => break,
+                Ok(DeferredEvent::NewRepo(name)) => {
                     {
                         let mut ui = ui.lock().unwrap();
                         ui.tags = TagList::with_status("fetching new tags...");
+                        sender.send(UiEvent::RefreshOnNewData).unwrap();
                     }
                     let list = async_tag_list::TagList::with_repo_name(name).await;
                     let mut ui = ui.lock().unwrap();
                     ui.tags = list;
                 }
-                Ok(UiEvent::TagPrevious) => {
+                Ok(DeferredEvent::TagPrevious) => {
                     let mut ui = ui.lock().unwrap();
                     ui.tags.previous();
                     ui.details = ui.tags.create_detail_widget();
                 }
-                Ok(UiEvent::TagNext) => {
+                Ok(DeferredEvent::TagNext) => {
                     let (fetched_new_tags, mut tags) = {
                         let mut ui = ui.lock().unwrap();
                         if ui.tags.at_end_of_list() {
                             ui.info.set_text("Fetching more tags...");
+                            sender.send(UiEvent::RefreshOnNewData).unwrap();
                             (true, ui.tags.clone())
                         } else {
                             (false, ui.tags.clone())
@@ -98,6 +121,7 @@ impl Ui {
                     ui.info.set_info(&e);
                 }
             };
+            sender.send(UiEvent::RefreshOnNewData).unwrap();
         }
     }
 
@@ -113,10 +137,12 @@ impl Ui {
         }));
 
         // spawn new thread that fetches information async
-        let (sender, receiver) = std::sync::mpsc::channel();
+        let (sender, receiver) = mpsc::channel();
+        let (deferred_sender, deferred_receiver) = mpsc::channel();
         let ui_clone = ui.clone();
+        let sender2 = sender.clone();
         std::thread::spawn(move || {
-            Self::work_requests(ui_clone, receiver);
+            Self::work_requests(ui_clone, deferred_receiver, sender2);
         });
 
         //setup tui
@@ -125,7 +151,7 @@ impl Ui {
         let mut terminal = Terminal::new(backend)?;
 
         //setup input thread
-        let receiver = super::spawn_stdin_channel();
+        Self::spawn_input_channel(sender);
 
         //core interaction loop
         'core: loop {
@@ -157,50 +183,56 @@ impl Ui {
                 rect.render_widget(ui_data.details.render(), more_chunks[1]);
                 rect.render_widget(ui_data.info.render(), chunks[2]);
             })?;
+            drop(ui_data);
 
             //handle input
-            match receiver.try_recv() {
-                Ok(Key::Ctrl('q')) => {
-                    sender.send(UiEvent::Quit)?;
+            //wait before locking
+            let event = receiver.recv();
+            let mut ui_data = ui.lock().unwrap();
+            match event {
+                Ok(UiEvent::Input(Key::Ctrl('q'))) | Ok(UiEvent::Input(Key::Ctrl('c'))) => {
+                    deferred_sender.send(DeferredEvent::Quit)?;
                     break 'core; //quit program without saving
                 }
-                Ok(Key::Char('\t')) => {
+                Ok(UiEvent::Input(Key::Char('\t'))) => {
                     ui_data.state.next();
                     let state = ui_data.state.clone();
                     ui_data.info.set_info(&state);
                 }
-                Ok(Key::Ctrl('r')) => {
+                Ok(UiEvent::Input(Key::Ctrl('r'))) => {
                     ui_data.repo.confirm();
-                    sender.send(UiEvent::NewRepo(ui_data.repo.get())).unwrap();
+                    deferred_sender
+                        .send(DeferredEvent::NewRepo(ui_data.repo.get()))
+                        .unwrap();
                 }
-                Ok(Key::Char('\n')) if ui_data.state == State::EditRepo => {
+                Ok(UiEvent::Input(Key::Char('\n'))) if ui_data.state == State::EditRepo => {
                     ui_data.repo.confirm();
-                    sender.send(UiEvent::NewRepo(ui_data.repo.get())).unwrap();
+                    deferred_sender
+                        .send(DeferredEvent::NewRepo(ui_data.repo.get()))
+                        .unwrap();
                 }
-                Ok(Key::Backspace) if ui_data.state == State::EditRepo => {
+                Ok(UiEvent::Input(Key::Backspace)) if ui_data.state == State::EditRepo => {
                     ui_data.info.set_text("Editing Repository");
                     ui_data.repo.handle_input(Key::Backspace);
                 }
-                Ok(Key::Up) | Ok(Key::Char('k')) if ui_data.state == State::SelectTag => {
-                    sender.send(UiEvent::TagPrevious).unwrap();
+                Ok(UiEvent::Input(Key::Up)) | Ok(UiEvent::Input(Key::Char('k')))
+                    if ui_data.state == State::SelectTag =>
+                {
+                    deferred_sender.send(DeferredEvent::TagPrevious).unwrap();
                     ui_data.details = ui_data.tags.create_detail_widget();
                 }
-                Ok(Key::Down) | Ok(Key::Char('j')) if ui_data.state == State::SelectTag => {
-                    sender.send(UiEvent::TagNext).unwrap();
+                Ok(UiEvent::Input(Key::Down)) | Ok(UiEvent::Input(Key::Char('j')))
+                    if ui_data.state == State::SelectTag =>
+                {
+                    deferred_sender.send(DeferredEvent::TagNext).unwrap();
                     ui_data.details = ui_data.tags.create_detail_widget();
                 }
-                Ok(Key::Char(key)) if ui_data.state == State::EditRepo => {
+                Ok(UiEvent::Input(Key::Char(key))) if ui_data.state == State::EditRepo => {
                     ui_data.info.set_text("Editing Repository");
                     ui_data.repo.handle_input(Key::Char(key));
                 }
                 _ => {}
             }
-
-            // release lock of ui for other threads
-            drop(ui_data);
-
-            //sleep for 32ms (30 fps)
-            thread::sleep(std::time::Duration::from_millis(32));
         }
 
         terminal.clear()?;
