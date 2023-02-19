@@ -102,10 +102,8 @@ impl Ui {
                         if ui.tags.at_end_of_list() {
                             ui.info.set_text("Fetching more tags...");
                             sender.send(UiEvent::RefreshOnNewData)?;
-                            (true, ui.tags.clone())
-                        } else {
-                            (false, ui.tags.clone())
                         }
+                        (ui.tags.at_end_of_list(), ui.tags.clone())
                     };
                     tags.next().await;
                     let mut ui = ui.lock().unwrap();
