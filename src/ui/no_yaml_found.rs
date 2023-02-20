@@ -53,8 +53,7 @@ impl std::iter::Iterator for State {
 pub enum DeferredEvent {
     Quit,
     NewRepo(String),
-    TagPrevious,
-    TagNext,
+    LoadMoreTags,
 }
 
 impl Ui {
@@ -88,35 +87,15 @@ impl Ui {
                     let mut ui = ui.lock().unwrap();
                     ui.tags = list;
                 }
-                Ok(DeferredEvent::TagPrevious) => {
-                    let mut ui = ui.lock().unwrap();
-                    ui.tags.previous();
-                    ui.details = ui.tags.create_detail_widget();
-                }
-                Ok(DeferredEvent::TagNext) => {
+                Ok(DeferredEvent::LoadMoreTags) if !fetching_tags.load(Ordering::Relaxed) => {
+                    fetching_tags.store(true, Ordering::Relaxed);
                     let mut tags_copy = {
                         let mut ui = ui.lock().unwrap();
-                        match ui.tags.next() {
-                            None => {
-                                // return early, also releases lock
-                                ui.details = ui.tags.create_detail_widget();
-                                sender.send(UiEvent::RefreshOnNewData)?;
-                                continue;
-                            }
-                            Some(_) if !fetching_tags.load(Ordering::Relaxed) => {
-                                fetching_tags.store(true, Ordering::Relaxed);
-                                ui.info.set_text("Fetching more tags...");
-                                sender.send(UiEvent::RefreshOnNewData)?;
-                                ui.tags.clone()
-                            }
-                            Some(_) => {
-                                // do nothing, as we are already fetching for new tags
-                                continue;
-                            }
-                        }
+                        ui.info.set_text("Fetching more tags...");
+                        sender.send(UiEvent::RefreshOnNewData)?;
+                        ui.tags.clone()
                     };
 
-                    // fetching new tags
                     let sender_copy = sender.clone();
                     let ui_copy = ui.clone();
                     let fetching_tags_copy = fetching_tags.clone();
@@ -138,6 +117,9 @@ impl Ui {
                                 fetching_tags_copy.store(false, Ordering::Relaxed);
                             })
                     });
+                }
+                Ok(DeferredEvent::LoadMoreTags) => {
+                    //do nothing, as we are fetching tags
                 }
                 Err(e) => {
                     let mut ui = ui.lock().unwrap();
@@ -210,7 +192,7 @@ impl Ui {
                 let (tags, state) = ui_data.tags.render(render_state);
                 let more_chunks = Layout::default()
                     .direction(Direction::Horizontal)
-                    .constraints([Constraint::Min(15), Constraint::Length(28)].as_ref())
+                    .constraints([Constraint::Min(15), Constraint::Length(29)].as_ref())
                     .split(chunks[1]);
                 rect.render_stateful_widget(tags, more_chunks[0], state);
                 rect.render_widget(ui_data.details.render(), more_chunks[1]);
@@ -252,12 +234,14 @@ impl Ui {
                     }
                     //moving up on selecting tags
                     Key::Up | Key::Char('k') if ui_data.state == State::SelectTag => {
-                        deferred_sender.send(DeferredEvent::TagPrevious)?;
+                        ui_data.tags.previous();
                         ui_data.details = ui_data.tags.create_detail_widget();
                     }
                     //moving down on selecting tags
                     Key::Down | Key::Char('j') if ui_data.state == State::SelectTag => {
-                        deferred_sender.send(DeferredEvent::TagNext)?;
+                        if ui_data.tags.next().is_some() {
+                            deferred_sender.send(DeferredEvent::LoadMoreTags).unwrap();
+                        }
                         ui_data.details = ui_data.tags.create_detail_widget();
                     }
                     //append character on editing repository
