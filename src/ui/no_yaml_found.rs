@@ -192,7 +192,7 @@ impl Ui {
                 let (tags, state) = ui_data.tags.render(render_state);
                 let more_chunks = Layout::default()
                     .direction(Direction::Horizontal)
-                    .constraints([Constraint::Min(15), Constraint::Length(29)].as_ref())
+                    .constraints([Constraint::Min(15), Constraint::Length(30)].as_ref())
                     .split(chunks[1]);
                 rect.render_stateful_widget(tags, more_chunks[0], state);
                 rect.render_widget(ui_data.details.render(), more_chunks[1]);

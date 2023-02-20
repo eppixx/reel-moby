@@ -26,7 +26,7 @@ impl Details {
         let mut lines = vec![format!("{:^10}|{:^6}|{:^6}", "ARCH", "OS", "SIZE")];
         for d in &self.details {
             lines.push(format!(
-                "{:^10}|{:^6}|{:^6}MB",
+                "{:>10}|{:>6}|{:>6} MB",
                 format!(
                     "{}{}",
                     d.arch.clone().unwrap_or_default(),
