@@ -78,6 +78,8 @@ impl Ui {
         events: mpsc::Receiver<DeferredEvent>,
         sender: mpsc::Sender<UiEvent>,
     ) -> Result<(), Error> {
+        use std::sync::atomic::Ordering;
+        let fetching_tags = Arc::new(std::sync::atomic::AtomicBool::new(false));
         loop {
             match events.recv() {
                 Ok(DeferredEvent::Quit) => break,
@@ -97,21 +99,50 @@ impl Ui {
                     ui.details = ui.tags.create_detail_widget();
                 }
                 Ok(DeferredEvent::TagNext) => {
-                    let (fetched_new_tags, mut tags) = {
+                    let mut tags_copy = {
                         let mut ui = ui.lock().unwrap();
-                        if ui.tags.at_end_of_list() {
-                            ui.info.set_text("Fetching more tags...");
-                            sender.send(UiEvent::RefreshOnNewData)?;
+                        match ui.tags.next() {
+                            None => {
+                                // return early, also releases lock
+                                ui.details = ui.tags.create_detail_widget();
+                                sender.send(UiEvent::RefreshOnNewData)?;
+                                continue;
+                            }
+                            Some(_) if !fetching_tags.load(Ordering::Relaxed) => {
+                                fetching_tags.store(true, Ordering::Relaxed);
+                                ui.info.set_text("Fetching more tags...");
+                                sender.send(UiEvent::RefreshOnNewData)?;
+                                ui.tags.clone()
+                            }
+                            Some(_) => {
+                                // do nothing, as we are already fetching for new tags
+                                continue;
+                            }
                         }
-                        (ui.tags.at_end_of_list(), ui.tags.clone())
                     };
-                    tags.next().await;
-                    let mut ui = ui.lock().unwrap();
-                    ui.tags = tags;
-                    ui.details = ui.tags.create_detail_widget();
-                    if fetched_new_tags {
-                        ui.info.set_text("Fetching tags done");
-                    }
+
+                    // fetching new tags
+                    let sender_copy = sender.clone();
+                    let ui_copy = ui.clone();
+                    let fetching_tags_copy = fetching_tags.clone();
+                    std::thread::spawn(move || {
+                        tokio::runtime::Builder::new_multi_thread()
+                            .enable_all()
+                            .build()
+                            .unwrap()
+                            .block_on(async {
+                                tags_copy.load_next_page().await;
+                                let mut ui = ui_copy.lock().unwrap();
+                                //set position to the position of old TagList
+                                //it may have changed since tag fetching has been invoked
+                                tags_copy.set_cursor(ui.tags.get_cursor().clone());
+                                ui.tags = tags_copy;
+                                ui.details = ui.tags.create_detail_widget();
+                                ui.info.set_text("Fetching tags done");
+                                sender_copy.send(UiEvent::RefreshOnNewData).unwrap();
+                                fetching_tags_copy.store(false, Ordering::Relaxed);
+                            })
+                    });
                 }
                 Err(e) => {
                     let mut ui = ui.lock().unwrap();

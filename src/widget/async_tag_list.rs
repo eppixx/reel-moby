@@ -86,11 +86,12 @@ impl TagList {
         }
     }
 
-    pub fn at_end_of_list(&self) -> bool {
-        if let Some(i) = self.state.selected() {
-            return i == self.lines.len() - 2;
-        }
-        false
+    pub fn set_cursor(&mut self, state: ListState) {
+        self.state = state;
+    }
+
+    pub fn get_cursor(&self) -> &ListState {
+        &self.state
     }
 
     pub fn render(&mut self, colored: bool) -> (List, &mut ListState) {
@@ -177,16 +178,19 @@ impl TagList {
     }
 
     /// select next tag
-    pub async fn next(&mut self) {
+    /// returns Some when more tags need to be fetched otherwise None
+    pub fn next(&mut self) -> Option<()> {
         if let Some(Line::Status(_)) = self.lines.get(0) {
-            return;
+            return None;
         }
         match self.state.selected() {
             None if !self.lines.is_empty() => self.state.select(Some(0)),
             None => (),
-            Some(i) if i == self.lines.len() - 2 => self.load_next_page().await,
+            Some(i) if i == self.lines.len() - 2 => return Some(()),
+            // Some(i) if i == self.lines.len() - 2 => return self.load_next_page().await,
             Some(i) => self.state.select(Some(i + 1)),
         }
+        None
     }
 
     /// select previous tag
