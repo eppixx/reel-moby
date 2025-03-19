@@ -85,7 +85,6 @@ impl Tag {
             }
         };
 
-        if dif.is_empty() {}
         format!("{}{}{}", self.name, dif, arch)
     }
 }

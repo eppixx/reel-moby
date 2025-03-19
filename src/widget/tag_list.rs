@@ -1,8 +1,8 @@
 use std::fmt;
 
 use termion::event::Key;
-use tui::style::{Color, Style};
-use tui::widgets::{Block, Borders, List, ListState};
+use ratatui::style::{Color, Style};
+use ratatui::widgets::{Block, Borders, List, ListState};
 
 use crate::repository;
 
@@ -89,11 +89,11 @@ impl TagList {
             Style::default().fg(Color::Gray)
         };
 
-        let items: Vec<tui::widgets::ListItem> = self
+        let items: Vec<ratatui::widgets::ListItem> = self
             .lines
             .iter()
             .map(|l| {
-                tui::widgets::ListItem::new(format!("{}", l))
+                ratatui::widgets::ListItem::new(format!("{}", l))
                     .style(Style::default().fg(Color::White).bg(Color::Black))
             })
             .collect();
@@ -147,34 +147,33 @@ impl TagList {
 
     /// load new tags from the next page
     fn load_next_page(&mut self) {
+        let Some(tags) = &self.tags else {
+            return;
+        };
+        let Some(new_tags) = tags.next_page() else {
+            return;
+        };
+
+        //load new tags object
+        self.tags = Some(new_tags);
+
+        //remove "load next page"
+        let next_page = self.lines.pop();
+
+        //add tags
         match &self.tags {
-            Some(tags) => match tags.next_page() {
-                None => (),
-                Some(new_tags) => {
-                    //load new tags object
-                    self.tags = Some(new_tags);
-
-                    //remove "load next page"
-                    let next_page = self.lines.pop();
-
-                    //add tags
-                    match &self.tags {
-                        None => (),
-                        Some(tags) => {
-                            for image in tags.get_tags().iter() {
-                                self.lines.push(Line::Image(image.clone()));
-                            }
-                        }
-                    }
-
-                    //readd next page
-                    match self.tags.as_ref().unwrap().next_page() {
-                        None => (),
-                        Some(_) => self.lines.push(next_page.unwrap()),
-                    }
-                }
-            },
             None => (),
+            Some(tags) => {
+                for image in tags.get_tags().iter() {
+                    self.lines.push(Line::Image(image.clone()));
+                }
+            }
+        }
+
+        //readd next page
+        match self.tags.as_ref().unwrap().next_page() {
+            None => (),
+            Some(_) => self.lines.push(next_page.unwrap()),
         }
     }
 
@@ -193,7 +192,7 @@ impl TagList {
         match self.state.selected() {
             None if !self.lines.is_empty() => self.state.select(Some(self.lines.len())),
             None => (),
-            Some(i) if i == 0 => self.state.select(Some(self.lines.len() - 1)),
+            Some(0) => self.state.select(Some(self.lines.len() - 1)),
             Some(i) => self.state.select(Some(i - 1)),
         }
     }

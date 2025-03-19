@@ -2,9 +2,9 @@ use std::{io, thread};
 
 use termion::event::Key;
 use termion::raw::IntoRawMode;
-use tui::backend::TermionBackend;
-use tui::layout::{Constraint, Direction, Layout};
-use tui::Terminal;
+use ratatui::backend::TermionBackend;
+use ratatui::layout::{Constraint, Direction, Layout};
+use ratatui::Terminal;
 
 use crate::widget::info;
 use crate::widget::repo_entry;
@@ -83,7 +83,7 @@ impl NoYaml {
                             ]
                             .as_ref(),
                         )
-                        .split(rect.size());
+                        .split(rect.area());
 
                     rect.render_widget(ui.repo.render(ui.state == State::EditRepo), chunks[0]);
                     let (list, state) = ui.tags.render(ui.state == State::SelectTag);

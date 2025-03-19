@@ -1,7 +1,7 @@
 use termion::event::Key;
-use tui::layout::Alignment;
-use tui::style::{Color, Style};
-use tui::widgets::{Block, Borders, Paragraph};
+use ratatui::layout::Alignment;
+use ratatui::style::{Color, Style};
+use ratatui::widgets::{Block, Borders, Paragraph};
 
 pub struct RepoEntry {
     text: String,

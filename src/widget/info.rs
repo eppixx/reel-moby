@@ -1,5 +1,5 @@
-use tui::style::{Color, Style};
-use tui::widgets::{Block, List, ListItem};
+use ratatui::style::{Color, Style};
+use ratatui::widgets::{Block, List, ListItem};
 
 pub struct Info {
     info: String,

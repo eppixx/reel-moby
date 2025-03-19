@@ -5,8 +5,8 @@ use std::io::BufReader;
 use std::io::Write;
 use std::path::PathBuf;
 
-use tui::style::{Color, Style};
-use tui::widgets::{Block, Borders, List, ListState};
+use ratatui::style::{Color, Style};
+use ratatui::widgets::{Block, Borders, List, ListState};
 
 use crate::repo;
 
@@ -78,11 +78,11 @@ impl ServiceSwitcher {
             false => format!("File: {}", &self.opened_file.display()),
         };
 
-        let items: Vec<tui::widgets::ListItem> = self
+        let items: Vec<ratatui::widgets::ListItem> = self
             .list
             .iter()
             .map(|l| {
-                tui::widgets::ListItem::new(l.as_ref())
+                ratatui::widgets::ListItem::new(l.clone())
                     .style(Style::default().fg(Color::White).bg(Color::Black))
             })
             .collect();

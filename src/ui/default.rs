@@ -3,9 +3,9 @@ use std::{io, thread};
 use crate::Opt;
 use termion::event::Key;
 use termion::raw::IntoRawMode;
-use tui::backend::TermionBackend;
-use tui::layout::{Constraint, Direction, Layout};
-use tui::Terminal;
+use ratatui::backend::TermionBackend;
+use ratatui::layout::{Constraint, Direction, Layout};
+use ratatui::Terminal;
 
 use crate::repository;
 use crate::widget::info;
@@ -87,7 +87,7 @@ impl Ui {
                             ]
                             .as_ref(),
                         )
-                        .split(rect.size());
+                        .split(rect.area());
 
                     let (list, state) = ui.services.render(ui.state == State::SelectService);
                     rect.render_stateful_widget(list, chunks[0], state);
