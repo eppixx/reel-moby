@@ -1,6 +1,9 @@
 use std::path::PathBuf;
 use clap::Parser;
+use anyhow::Result;
 
+mod common;
+mod error;
 mod repo;
 mod repository;
 mod ui;
@@ -18,8 +21,8 @@ pub struct Args {
     repo: Option<String>,
 }
 
-fn main() {
+fn main() -> Result<()> {
     //parse parameter
     let args = Args::parse();
-    ui::create_ui(&args);
+    ui::create_ui(&args)
 }

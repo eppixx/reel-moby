@@ -1,6 +1,5 @@
 use std::fmt;
 
-use termion::event::Key;
 use ratatui::style::{Color, Style};
 use ratatui::widgets::{Block, Borders, List, ListState};
 
@@ -22,6 +21,7 @@ impl fmt::Display for Error {
     }
 }
 
+#[derive(Clone)]
 enum Line {
     Status(String),
     Image(repository::Tag),
@@ -38,6 +38,7 @@ impl fmt::Display for Line {
     }
 }
 
+#[derive(Clone)]
 pub struct TagList {
     lines: Vec<Line>,
     state: ListState,
@@ -45,6 +46,7 @@ pub struct TagList {
 }
 
 impl TagList {
+    /// shows a text in the list and no tags
     pub fn with_status(status: &str) -> Self {
         Self {
             lines: vec![Line::Status(String::from(status))],
@@ -53,21 +55,23 @@ impl TagList {
         }
     }
 
-    pub fn with_repo_name(repo: String) -> Self {
-        match repository::Repo::new(&repo) {
-            Ok(tags) => Self::with_tags(tags),
+    /// list the tags of the repository if the input is valid
+    pub async fn with_repo_name(repo: String) -> Self {
+        match repository::Repo::new(&repo).await {
+            Ok(tags) => Self::with_tags(tags).await,
             Err(_) => Self::with_status("input repo was not found"),
         }
     }
 
-    pub fn with_tags(mut tags: repository::Repo) -> Self {
+    /// list the tags of the input
+    async fn with_tags(mut tags: repository::Repo) -> Self {
         let mut lines: Vec<Line> = tags
             .get_tags()
             .iter()
             .map(|r| Line::Image(r.clone()))
             .collect();
 
-        match tags.next_page() {
+        match tags.next_page().await {
             None => (),
             Some(new_tags) => {
                 lines.push(Line::NextPage(String::from("load more tags")));
@@ -80,6 +84,14 @@ impl TagList {
             state: ListState::default(),
             tags: Some(tags),
         }
+    }
+
+    pub fn set_cursor(&mut self, state: ListState) {
+        self.state = state;
+    }
+
+    pub fn get_cursor(&self) -> &ListState {
+        &self.state
     }
 
     pub fn render(&mut self, colored: bool) -> (List, &mut ListState) {
@@ -113,21 +125,15 @@ impl TagList {
         (items, &mut self.state)
     }
 
-    pub fn handle_input(&mut self, key: termion::event::Key) {
-        match key {
-            Key::Down => self.next(),
-            Key::Up => self.previous(),
-            Key::Char('\n') => self.select(),
-            _ => (),
-        }
-    }
+    pub fn create_detail_widget(&self) -> crate::widget::details::Details {
+        use crate::widget::details::Details;
 
-    /// loads new tags when matching line is selected
-    fn select(&mut self) {
-        if let Some(i) = self.state.selected() {
-            if let Line::NextPage(_) = &self.lines[i] {
-                self.load_next_page()
-            }
+        match self.state.selected() {
+            None => Details::new(),
+            Some(i) => match &self.lines[i] {
+                Line::Image(t) => Details::with_list(t.get_details()),
+                _ => Details::new(),
+            },
         }
     }
 
@@ -137,20 +143,17 @@ impl TagList {
             Some(i) => match &self.lines[i] {
                 Line::Status(_) => Err(Error::SelectedStatus),
                 Line::Image(i) => Ok(i.get_name().to_string()),
-                Line::NextPage(_) => {
-                    self.load_next_page();
-                    Err(Error::NextPageSelected)
-                }
+                Line::NextPage(_) => Err(Error::NextPageSelected),
             },
         }
     }
 
     /// load new tags from the next page
-    fn load_next_page(&mut self) {
+    pub async fn load_next_page(&mut self) {
         let Some(tags) = &self.tags else {
             return;
         };
-        let Some(new_tags) = tags.next_page() else {
+        let Some(new_tags) = tags.next_page().await else {
             return;
         };
 
@@ -161,38 +164,42 @@ impl TagList {
         let next_page = self.lines.pop();
 
         //add tags
-        match &self.tags {
-            None => (),
-            Some(tags) => {
-                for image in tags.get_tags().iter() {
-                    self.lines.push(Line::Image(image.clone()));
-                }
+        if let Some(tags) = &self.tags {
+            for image in tags.get_tags().iter() {
+                self.lines.push(Line::Image(image.clone()));
             }
         }
 
-        //readd next page
-        match self.tags.as_ref().unwrap().next_page() {
-            None => (),
-            Some(_) => self.lines.push(next_page.unwrap()),
+        //readd next page item
+        if (self.tags.as_ref().unwrap().next_page().await).is_some() {
+            self.lines.push(next_page.unwrap());
         }
     }
 
     /// select next tag
-    fn next(&mut self) {
+    /// returns Some when more tags need to be fetched otherwise None
+    pub fn next(&mut self) -> Option<()> {
+        if let Some(Line::Status(_)) = self.lines.first() {
+            return None;
+        }
         match self.state.selected() {
             None if !self.lines.is_empty() => self.state.select(Some(0)),
             None => (),
-            Some(i) if i == self.lines.len() - 1 => self.state.select(Some(0)),
+            Some(i) if i == self.lines.len() - 2 => return Some(()),
+            // Some(i) if i == self.lines.len() - 2 => return self.load_next_page().await,
             Some(i) => self.state.select(Some(i + 1)),
         }
+        None
     }
 
     /// select previous tag
-    fn previous(&mut self) {
+    pub fn previous(&mut self) {
+        if let Some(Line::Status(_)) = self.lines.first() {
+            return;
+        }
         match self.state.selected() {
-            None if !self.lines.is_empty() => self.state.select(Some(self.lines.len())),
-            None => (),
-            Some(0) => self.state.select(Some(self.lines.len() - 1)),
+            None => self.state.select(Some(0)),
+            Some(0) => self.state.select(Some(self.lines.len() - 2)),
             Some(i) => self.state.select(Some(i - 1)),
         }
     }

@@ -1,10 +1,12 @@
 use serde::Deserialize;
 
-use crate::repository::Error;
+use crate::error::Error;
 
 #[derive(Deserialize, Debug, Clone)]
 struct ImageDetails {
     architecture: String,
+    os: String,
+    variant: Option<String>,
     size: usize,
 }
 
@@ -17,15 +19,17 @@ pub struct Images {
 }
 
 impl Images {
-    pub fn convert(&self) -> super::Tag {
+    pub fn from_tag(images: &Self) -> super::Tag {
         super::Tag {
-            name: self.tag_name.clone(),
-            last_updated: Some(self.last_updated.clone()),
-            details: self
+            name: images.tag_name.clone(),
+            last_updated: Some(images.last_updated.clone()),
+            details: images
                 .images
                 .iter()
                 .map(|d| super::TagDetails {
                     arch: Some(d.architecture.clone()),
+                    variant: Some(d.variant.clone().unwrap_or_default()),
+                    os: Some(d.os.clone()),
                     size: Some(d.size),
                 })
                 .collect(),
@@ -42,30 +46,23 @@ pub struct DockerHub {
 
 impl DockerHub {
     /// fetches tag information with a repository name in the form of organization/repository or library/repository in the case of official images from docker
-    pub fn create_repo(repo: &str) -> Result<super::Repo, Error> {
+    pub async fn create_repo(repo: &str) -> Result<super::Repo, Error> {
         let request = format!("https://hub.docker.com/v2/repositories/{}/tags", repo);
-        Self::with_url(&request)
+        Self::with_url(&request).await
     }
 
     /// fetches tag information from a url
-    pub fn with_url(url: &str) -> Result<super::Repo, Error> {
-        let response = match reqwest::blocking::get(url) {
-            Ok(result) => result,
-            Err(e) => return Err(Error::Fetching(format!("reqwest error: {}", e))),
-        };
+    pub async fn with_url(url: &str) -> Result<super::Repo, Error> {
+        let response = reqwest::get(url).await?;
 
         //convert it to json
-        let tags = match response.json::<Self>() {
-            Ok(result) => result,
-            Err(e) => return Err(Error::Converting(format!("invalid json: {}", e))),
-        };
-
+        let tags = response.json::<Self>().await?;
         if tags.results.is_empty() {
             return Err(Error::NoTagsFound);
         }
 
         Ok(super::Repo {
-            tags: tags.results.iter().map(|t| t.convert()).collect(),
+            tags: tags.results.iter().map(Images::from_tag).collect(),
             next_page: tags.next_page,
         })
     }

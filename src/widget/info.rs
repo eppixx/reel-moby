@@ -11,7 +11,7 @@ impl Info {
         Self {
             info: String::from(info),
             keys: String::from(
-                "Tab Cycle widgets   C-s Save   C-r Reload   C-q Quit   ↑ ↓ Select tags or image line   Return Select current selection",
+                "Tab Cycle widgets   C-s Save   C-r Reload   C-q Quit   ↑ ↓ Select tags or image line   Return Select",
             ),
         }
     }
@@ -27,7 +27,13 @@ impl Info {
             .highlight_style(Style::default().bg(Color::Black))
     }
 
-    pub fn set_info(&mut self, info: &str) {
+    /// set a text to display
+    pub fn set_text(&mut self, info: &str) {
         self.info = String::from(info);
+    }
+
+    /// print a text to display
+    pub fn set_info(&mut self, text: &dyn std::fmt::Display) {
+        self.info = format!("{}", text);
     }
 }

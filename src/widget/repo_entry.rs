@@ -7,14 +7,17 @@ pub struct RepoEntry {
     text: String,
     old_text: String,
     changed: bool,
+    default_text: bool,
 }
 
 impl RepoEntry {
-    pub fn new(text: &str) -> Self {
+    pub fn new(text: Option<&str>) -> Self {
+        let default_text = "edit me or select a repository";
         Self {
-            text: String::from(text),
-            old_text: String::from(text),
+            text: String::from(text.unwrap_or(default_text)),
+            old_text: String::from(text.unwrap_or(default_text)),
             changed: false,
+            default_text: text.is_none(),
         }
     }
 
@@ -56,9 +59,14 @@ impl RepoEntry {
             Key::Char(c) => {
                 self.text.push(c);
                 self.changed = true;
+                self.default_text = false;
             }
             Key::Backspace => {
-                self.text.pop();
+                if self.default_text {
+                    self.text = String::new();
+                } else {
+                    self.text.pop();
+                }
                 self.changed = true;
             }
             Key::Esc => {
