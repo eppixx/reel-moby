@@ -9,7 +9,7 @@ use ratatui::Terminal;
 use crate::widget::info;
 use crate::widget::repo_entry;
 use crate::widget::tag_list;
-use crate::Opt;
+use crate::Args;
 
 #[derive(PartialEq, Clone)]
 pub enum State {
@@ -37,7 +37,7 @@ pub struct NoYaml {
 }
 
 impl NoYaml {
-    pub fn run(opt: &Opt) {
+    pub fn run(opt: &Args) {
         let (repo, load_repo) = match &opt.repo {
             None => (
                 repo_entry::RepoEntry::new(

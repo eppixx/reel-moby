@@ -4,12 +4,12 @@ mod no_yaml;
 use std::sync::mpsc;
 use std::{io, thread};
 
-use crate::Opt;
 use termion::input::TermRead;
 
 use crate::widget::service_switcher;
+use crate::Args;
 
-pub fn create_ui(opt: &Opt) {
+pub fn create_ui(opt: &Args) {
     let service_result = service_switcher::ServiceSwitcher::new(&opt.file);
     match service_result {
         None => no_yaml::NoYaml::run(opt),

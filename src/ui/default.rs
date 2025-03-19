@@ -1,13 +1,12 @@
 use std::{io, thread};
 
-use crate::Opt;
 use termion::event::Key;
 use termion::raw::IntoRawMode;
 use ratatui::backend::TermionBackend;
 use ratatui::layout::{Constraint, Direction, Layout};
 use ratatui::Terminal;
 
-use crate::repository;
+use crate::{repository, Args};
 use crate::widget::info;
 use crate::widget::repo_entry;
 use crate::widget::service_switcher;
@@ -42,7 +41,7 @@ impl std::iter::Iterator for State {
 }
 
 impl Ui {
-    pub fn run(opt: &Opt) {
+    pub fn run(opt: &Args) {
         let (repo_id, load_repo) = match &opt.repo {
             None => (
                 "enter a repository here or select one from file widget",
